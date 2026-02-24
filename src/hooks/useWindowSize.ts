@@ -1,3 +1,10 @@
+/**
+ * Track the current browser window dimensions, updating on resize.
+ *
+ * Defaults to 1200×800 when window is not available (SSR context).
+ * Used by Workspace to size the confetti canvas to the full viewport on submission success.
+ */
+
 import { useEffect, useState } from "react";
 
 export default function useWindowSize() {

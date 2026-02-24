@@ -1,3 +1,12 @@
+/**
+ * Firebase client initialization for BeatCode.
+ *
+ * Initializes the Firebase app (guarding against double-initialization in Next.js
+ * hot reload), then exports singleton Auth and Firestore clients used throughout
+ * the application. All configuration values are read from NEXT_PUBLIC_FIREBASE_*
+ * environment variables defined in .env.local.
+ */
+
 import { initializeApp, getApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";

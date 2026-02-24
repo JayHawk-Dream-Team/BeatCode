@@ -1,3 +1,11 @@
+/**
+ * Full problem definition for "Valid Parentheses" (LeetCode #20).
+ *
+ * Exports the Problem object including HTML problem statement, examples, constraints,
+ * JavaScript starter code template, and a handlerFunction that validates user solutions
+ * against test cases using Node's assert library.
+ */
+
 import assert from "assert";
 import { Problem } from "../types/problem";
 

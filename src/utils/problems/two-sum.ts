@@ -1,3 +1,12 @@
+/**
+ * Full problem definition for "Two Sum" (LeetCode #1).
+ *
+ * Exports the Problem object including the HTML problem statement, examples, constraints,
+ * JavaScript starter code template, and a handlerFunction that validates user solutions
+ * against three test cases using Node's assert library. The handlerFunction runs
+ * entirely in the browser after being re-constructed from its string form via new Function().
+ */
+
 import assert from "assert";
 import { Problem } from "../types/problem";
 

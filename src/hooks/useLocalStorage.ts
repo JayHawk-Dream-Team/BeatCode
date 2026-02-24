@@ -1,3 +1,12 @@
+/**
+ * useState-compatible hook that persists its value to localStorage.
+ *
+ * Initializes from localStorage on mount (SSR-safe via window check). Falls back to
+ * initialValue if the key is absent or if localStorage is unavailable. Syncs every
+ * value update back to localStorage via useEffect. Used to persist editor font size
+ * across sessions with the key "lcc-fontSize".
+ */
+
 import { useState, useEffect } from "react";
 
 const useLocalStorage = (key: string, initialValue: string) => {

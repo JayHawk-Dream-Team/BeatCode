@@ -1,3 +1,11 @@
+/**
+ * Login form inside the auth modal.
+ *
+ * Signs in with Firebase email/password auth and redirects to the home page on
+ * success. Switches to the register or forgotPassword views by updating the
+ * authModalState type atom.
+ */
+
 import { authModalState } from "@/atoms/authModalAtom";
 import { auth } from "@/firebase/firebase";
 import { useRouter } from "next/router";
@@ -19,6 +27,7 @@ const Login: React.FC<LoginProps> = () => {
 		setInputs((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 	};
 
+	/** Validate inputs and submit email/password credentials to Firebase Auth. */
 	const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		if (!inputs.email || !inputs.password) return alert("Please fill all fields");

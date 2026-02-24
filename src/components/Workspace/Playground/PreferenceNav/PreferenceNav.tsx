@@ -1,3 +1,12 @@
+/**
+ * Toolbar above the code editor for editor preferences and view controls.
+ *
+ * Shows the active language (JavaScript, fixed) and buttons to open SettingsModal
+ * and toggle fullscreen mode. Listens for browser fullscreen change events —
+ * including vendor-prefixed variants — to keep the icon in sync when the user
+ * exits fullscreen via Escape rather than the button.
+ */
+
 import { useState, useEffect } from "react";
 import { AiOutlineFullscreen, AiOutlineFullscreenExit, AiOutlineSetting } from "react-icons/ai";
 import { ISettings } from "../Playground";
@@ -11,6 +20,7 @@ type PreferenceNavProps = {
 const PreferenceNav: React.FC<PreferenceNavProps> = ({ setSettings, settings }) => {
 	const [isFullScreen, setIsFullScreen] = useState(false);
 
+	/** Toggle browser fullscreen and sync the local icon state. */
 	const handleFullScreen = () => {
 		if (isFullScreen) {
 			document.exitFullscreen();

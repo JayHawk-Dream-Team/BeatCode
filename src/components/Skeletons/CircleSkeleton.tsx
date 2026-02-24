@@ -1,3 +1,10 @@
+/**
+ * Animated circle placeholder shown while problem difficulty metadata loads.
+ *
+ * Sized to match the difficulty badge circle in ProblemDescription to prevent
+ * layout shift when the real content arrives.
+ */
+
 import React from "react";
 
 const CircleSkeleton: React.FC = () => {

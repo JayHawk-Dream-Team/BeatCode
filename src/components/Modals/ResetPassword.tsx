@@ -1,3 +1,10 @@
+/**
+ * Password reset form inside the auth modal.
+ *
+ * Sends a Firebase password reset email and shows a success toast.
+ * No redirect occurs after submission — the user returns to the login view manually.
+ */
+
 import { auth } from "@/firebase/firebase";
 import React, { useState, useEffect } from "react";
 import { useSendPasswordResetEmail } from "react-firebase-hooks/auth";

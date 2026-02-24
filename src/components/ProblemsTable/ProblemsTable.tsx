@@ -1,3 +1,13 @@
+/**
+ * Problems table component that fetches and displays the full problem list.
+ *
+ * Pulls problem metadata from the Firestore "problems" collection ordered by the
+ * "order" field, and separately fetches the current user's solved problem IDs.
+ * Problems with a "link" field route to the external LeetCode URL; otherwise they
+ * link to the internal /problems/[pid] workspace. Video solutions open in an
+ * in-page YouTube modal that closes on Escape or backdrop click.
+ */
+
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { BsCheckCircle } from "react-icons/bs";
@@ -115,6 +125,11 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems }) => 
 };
 export default ProblemsTable;
 
+/** Fetch all problems from Firestore ordered by the "order" field.
+ *
+ * Signals loading state to the parent via setLoadingProblems so the skeleton
+ * is displayed while the query is in flight.
+ */
 function useGetProblems(setLoadingProblems: React.Dispatch<React.SetStateAction<boolean>>) {
 	const [problems, setProblems] = useState<DBProblem[]>([]);
 
@@ -137,6 +152,11 @@ function useGetProblems(setLoadingProblems: React.Dispatch<React.SetStateAction<
 	return problems;
 }
 
+/** Return the list of problem IDs the current user has solved.
+ *
+ * Resets to an empty array on sign-out so solved checkmarks disappear
+ * immediately without requiring a page refresh.
+ */
 function useGetSolvedProblems() {
 	const [solvedProblems, setSolvedProblems] = useState<string[]>([]);
 	const [user] = useAuthState(auth);

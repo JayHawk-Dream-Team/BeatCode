@@ -1,3 +1,12 @@
+/**
+ * Top navigation bar shared between the home page and problem pages.
+ *
+ * In problem page mode (problemPage prop), shows prev/next problem navigation
+ * and a live countdown timer. Problem navigation wraps around: forward from the
+ * last problem goes to the first, and backward from the first goes to the last.
+ * Auth controls (Sign In / avatar tooltip / Logout) are shown on the right in both modes.
+ */
+
 import { auth } from "@/firebase/firebase";
 import Link from "next/link";
 import React from "react";
@@ -22,6 +31,11 @@ const Topbar: React.FC<TopbarProps> = ({ problemPage }) => {
 	const setAuthModalState = useSetRecoilState(authModalState);
 	const router = useRouter();
 
+	/** Navigate to the next or previous problem by order number, wrapping at both ends.
+	 *
+	 * Searches the local problems map by order value rather than array index to support
+	 * non-contiguous ordering without breaking navigation.
+	 */
 	const handleProblemChange = (isForward: boolean) => {
 		const { order } = problems[router.query.pid as string] as Problem;
 		const direction = isForward ? 1 : -1;

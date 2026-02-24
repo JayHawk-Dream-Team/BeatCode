@@ -1,3 +1,11 @@
+/**
+ * Next.js application root that wraps every page with shared providers.
+ *
+ * Provides Recoil state management, global toast notifications, and shared HTML
+ * head metadata (title, favicon, viewport). This is the single place providers
+ * should be added — avoid wrapping individual pages separately.
+ */
+
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import Head from "next/head";

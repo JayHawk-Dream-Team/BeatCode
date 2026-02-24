@@ -1,3 +1,11 @@
+/**
+ * Auth modal container that renders the correct form based on authModalState.
+ *
+ * Mounts over a semi-transparent backdrop; clicking the backdrop or pressing Escape
+ * closes the modal and resets the type to "login". The active view (Login, Signup,
+ * or ResetPassword) is driven by the Recoil authModalState atom.
+ */
+
 import { authModalState } from "@/atoms/authModalAtom";
 import React, { useEffect } from "react";
 import { IoClose } from "react-icons/io5";
@@ -38,6 +46,11 @@ const AuthModal: React.FC<AuthModalProps> = () => {
 };
 export default AuthModal;
 
+/** Return a close handler that resets modal state and attaches an Escape key listener.
+ *
+ * Extracted as a hook so the escape listener is set up once on mount and cleaned
+ * up when the modal unmounts, rather than re-registering on each render.
+ */
 function useCloseModal() {
 	const setAuthModal = useSetRecoilState(authModalState);
 

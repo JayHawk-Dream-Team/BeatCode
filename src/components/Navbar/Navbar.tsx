@@ -1,3 +1,10 @@
+/**
+ * Minimal navbar used exclusively on the /auth landing page.
+ *
+ * Shows the logo and a Sign In button that opens the auth modal by setting
+ * authModalState.isOpen to true. The main app uses Topbar instead of this component.
+ */
+
 import { authModalState } from "@/atoms/authModalAtom";
 import Image from "next/image";
 import Link from "next/link";

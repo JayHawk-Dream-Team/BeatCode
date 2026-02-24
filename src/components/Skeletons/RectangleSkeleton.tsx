@@ -1,3 +1,10 @@
+/**
+ * Animated pill-shaped placeholder shown while problem metadata loads.
+ *
+ * Used alongside CircleSkeleton in ProblemDescription to fill the difficulty
+ * and action button row during the Firestore fetch.
+ */
+
 import React from "react";
 
 const RectangleSkeleton: React.FC = () => {

@@ -1,3 +1,11 @@
+/**
+ * Registration form inside the auth modal.
+ *
+ * Creates a Firebase Auth account and immediately writes a matching Firestore user
+ * document with empty arrays for likedProblems, dislikedProblems, solvedProblems,
+ * and starredProblems. Redirects to home on success.
+ */
+
 import { authModalState } from "@/atoms/authModalAtom";
 import { auth, firestore } from "@/firebase/firebase";
 import { useEffect, useState } from "react";
@@ -21,6 +29,12 @@ const Signup: React.FC<SignupProps> = () => {
 		setInputs((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 	};
 
+	/** Create a Firebase Auth account and initialize the user's Firestore document.
+	 *
+	 * The Firestore document is created here rather than in a Cloud Function to keep the
+	 * architecture serverless. The user document schema must stay in sync with field reads
+	 * in ProblemDescription (liked/disliked/starred/solved arrays) and ProblemsTable.
+	 */
 	const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		if (!inputs.email || !inputs.password || !inputs.displayName) return alert("Please fill all fields");

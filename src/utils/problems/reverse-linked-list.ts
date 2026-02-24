@@ -1,3 +1,11 @@
+/**
+ * Full problem definition for "Reverse Linked List" (LeetCode #206).
+ *
+ * Exports the Problem object including HTML problem statement, examples (with diagram image),
+ * constraints, JavaScript starter code template, and a handlerFunction that validates
+ * user solutions against test cases using Node's assert library.
+ */
+
 import assert from "assert";
 import { Problem } from "../types/problem";
 import example from "./images/reverseLL.jpg";

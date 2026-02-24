@@ -1,3 +1,11 @@
+/**
+ * Sticky footer bar at the bottom of the code editor panel.
+ *
+ * Contains the Console toggle (currently decorative) and the Run / Submit buttons.
+ * Both Run and Submit trigger the same handleSubmit callback — the distinction
+ * between them is visual only in this implementation.
+ */
+
 import React from "react";
 import { BsChevronUp } from "react-icons/bs";
 

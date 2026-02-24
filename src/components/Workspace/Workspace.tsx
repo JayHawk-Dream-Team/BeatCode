@@ -1,3 +1,12 @@
+/**
+ * Top-level problem workspace split between description and code editor.
+ *
+ * Uses react-split to create a horizontally resizable two-pane layout. Manages the
+ * success/solved state shared between Playground (which sets them) and
+ * ProblemDescription (which reflects the solved badge). When success is true,
+ * confetti is rendered full-screen to celebrate the submission.
+ */
+
 import { useState } from "react";
 import Split from "react-split";
 import ProblemDescription from "./ProblemDescription/ProblemDescription";

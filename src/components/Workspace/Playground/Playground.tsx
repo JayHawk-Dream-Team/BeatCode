@@ -1,3 +1,14 @@
+/**
+ * Code editor panel where users write, run, and submit solutions.
+ *
+ * Vertically split between the CodeMirror editor (top) and test case viewer (bottom).
+ * User code is persisted to localStorage keyed by problem id so drafts survive page
+ * refreshes. On submit, the function name is extracted from the editor content, wrapped
+ * in new Function() for client-side execution, and validated by the problem's
+ * handlerFunction using Node's assert. Successful submissions update the user's
+ * solvedProblems array in Firestore.
+ */
+
 import { useState, useEffect } from "react";
 import PreferenceNav from "./PreferenceNav/PreferenceNav";
 import Split from "react-split";
@@ -43,6 +54,12 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved 
 		query: { pid },
 	} = useRouter();
 
+	/** Extract, execute, and validate the user's code against the problem's test cases.
+	 *
+	 * Slices the editor content from the target function name to strip any preamble,
+	 * wraps it in new Function() for browser-side evaluation, then passes it to the
+	 * problem's handlerFunction. Throws and surfaces a toast on assertion or runtime errors.
+	 */
 	const handleSubmit = async () => {
 		if (!user) {
 			toast.error("Please login to submit your code", {
@@ -106,6 +123,7 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved 
 		}
 	}, [pid, user, problem.starterCode]);
 
+	/** Sync editor value to state and persist to localStorage as the user types. */
 	const onChange = (value: string) => {
 		setUserCode(value);
 		localStorage.setItem(`code-${pid}`, JSON.stringify(value));

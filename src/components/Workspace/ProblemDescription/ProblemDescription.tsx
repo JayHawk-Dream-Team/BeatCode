@@ -1,3 +1,12 @@
+/**
+ * Left pane displaying problem metadata, statement, examples, and user interactions.
+ *
+ * Fetches the live Firestore problem record for dynamic data (difficulty, likes, dislikes)
+ * while using the SSG-injected Problem prop for static HTML content. Like, dislike, and
+ * star actions use Firestore transactions to atomically update both the problem document
+ * and the user document, preventing race conditions on concurrent writes.
+ */
+
 import CircleSkeleton from "@/components/Skeletons/CircleSkeleton";
 import RectangleSkeleton from "@/components/Skeletons/RectangleSkeleton";
 import { auth, firestore } from "@/firebase/firebase";
@@ -21,6 +30,11 @@ const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solve
 	const { liked, disliked, solved, setData, starred } = useGetUsersDataOnProblem(problem.id);
 	const [updating, setUpdating] = useState(false);
 
+	/** Fetch both the user document and the problem document within a single transaction.
+	 *
+	 * Centralizes ref/snapshot retrieval shared by handleLike, handleDislike, and handleStar
+	 * so each handler stays focused on its specific update logic.
+	 */
 	const returnUserDataAndProblemData = async (transaction: any) => {
 		const userRef = doc(firestore, "users", user!.uid);
 		const problemRef = doc(firestore, "problems", problem.id);
@@ -29,6 +43,11 @@ const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solve
 		return { userDoc, problemDoc, userRef, problemRef };
 	};
 
+	/** Toggle the user's like, handling the unlike and dislike-to-like cases.
+	 *
+	 * Three branches: already liked (remove), currently disliked (flip to like), neither (add).
+	 * All Firestore writes are batched in a single transaction for consistency.
+	 */
 	const handleLike = async () => {
 		if (!user) {
 			toast.error("You must be logged in to like a problem", { position: "top-left", theme: "dark" });
@@ -80,6 +99,7 @@ const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solve
 		setUpdating(false);
 	};
 
+	/** Toggle the user's dislike, handling the un-dislike and like-to-dislike cases. */
 	const handleDislike = async () => {
 		if (!user) {
 			toast.error("You must be logged in to dislike a problem", { position: "top-left", theme: "dark" });
@@ -128,6 +148,7 @@ const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solve
 		setUpdating(false);
 	};
 
+	/** Toggle the user's starred status for this problem. */
 	const handleStar = async () => {
 		if (!user) {
 			toast.error("You must be logged in to star a problem", { position: "top-left", theme: "dark" });
@@ -265,6 +286,11 @@ const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solve
 };
 export default ProblemDescription;
 
+/** Fetch the live Firestore problem record and derive its difficulty CSS class.
+ *
+ * Runs once per problemId change. Returns a loading flag so callers can display
+ * skeleton placeholders while the fetch is in flight.
+ */
 function useGetCurrentProblem(problemId: string) {
 	const [currentProblem, setCurrentProblem] = useState<DBProblem | null>(null);
 	const [loading, setLoading] = useState<boolean>(true);
@@ -296,6 +322,11 @@ function useGetCurrentProblem(problemId: string) {
 	return { currentProblem, loading, problemDifficultyClass, setCurrentProblem };
 }
 
+/** Load the current user's interaction state (liked, disliked, starred, solved) for a problem.
+ *
+ * Resets all flags to false when the user signs out or the problem changes,
+ * ensuring stale state from a previous session is never displayed.
+ */
 function useGetUsersDataOnProblem(problemId: string) {
 	const [data, setData] = useState({ liked: false, disliked: false, starred: false, solved: false });
 	const [user] = useAuthState(auth);

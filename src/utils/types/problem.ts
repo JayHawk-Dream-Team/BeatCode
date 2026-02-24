@@ -1,3 +1,14 @@
+/**
+ * Shared type definitions for the two-layer problem data model.
+ *
+ * Problem holds the full local definition used in SSG pages and client-side code
+ * execution — including the HTML problem statement, test examples, starter code, and
+ * the handlerFunction that validates user submissions in the browser.
+ *
+ * DBProblem is the lightweight Firestore representation used in the problems list,
+ * containing only metadata (difficulty, category, likes, videoId, etc.).
+ */
+
 export type Example = {
 	id: number;
 	inputText: string;

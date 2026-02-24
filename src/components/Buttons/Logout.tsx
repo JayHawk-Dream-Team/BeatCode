@@ -1,3 +1,10 @@
+/**
+ * Sign-out button rendered in the Topbar for authenticated users.
+ *
+ * Calls Firebase signOut on click; react-firebase-hooks handles the auth state
+ * update automatically, causing pages that check useAuthState to re-render.
+ */
+
 import { auth } from "@/firebase/firebase";
 import React from "react";
 import { useSignOut } from "react-firebase-hooks/auth";

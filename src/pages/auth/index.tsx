@@ -1,3 +1,12 @@
+/**
+ * Authentication landing page at /auth.
+ *
+ * Shows a hero image and a Navbar with a Sign In button. Redirects authenticated
+ * users back to the home page immediately on mount. The AuthModal overlay
+ * (login / signup / reset password) is conditionally rendered based on
+ * the Recoil authModalState atom.
+ */
+
 import { authModalState } from "@/atoms/authModalAtom";
 import AuthModal from "@/components/Modals/AuthModal";
 import Navbar from "@/components/Navbar/Navbar";

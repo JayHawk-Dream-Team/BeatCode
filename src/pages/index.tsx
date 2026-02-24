@@ -1,3 +1,11 @@
+/**
+ * Home page displaying the full problems list.
+ *
+ * Renders a pulse skeleton while Firestore data loads, then hands off to
+ * ProblemsTable which owns the data-fetching and rendering logic. useHasMounted
+ * prevents hydration mismatches from SSR/CSR differences on the skeleton animation.
+ */
+
 import ProblemsTable from "@/components/ProblemsTable/ProblemsTable";
 import Topbar from "@/components/Topbar/Topbar";
 import useHasMounted from "@/hooks/useHasMounted";

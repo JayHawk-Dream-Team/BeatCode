@@ -1,3 +1,11 @@
+/**
+ * Full problem definition for "Search a 2D Matrix" (LeetCode #74).
+ *
+ * Exports the Problem object including HTML problem statement, examples (with diagram images),
+ * constraints, JavaScript starter code template, and a handlerFunction that validates
+ * user solutions against test cases using Node's assert library.
+ */
+
 import assert from "assert";
 import { Problem } from "../types/problem";
 import example1 from "./images/search-a-2d-1.jpg";

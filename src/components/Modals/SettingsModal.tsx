@@ -1,3 +1,12 @@
+/**
+ * Editor settings modal for configuring code editor preferences.
+ *
+ * Currently exposes only font size, which is persisted to localStorage via
+ * useLocalStorage and immediately applied to the CodeMirror instance through
+ * the shared ISettings state. New settings should follow the same pattern:
+ * add to ISettings, persist with useLocalStorage, and apply in Playground.
+ */
+
 import { BsCheckLg, BsChevronDown } from "react-icons/bs";
 import { IoClose } from "react-icons/io5";
 import { ISettings } from "../Workspace/Playground/Playground";
@@ -13,6 +22,7 @@ interface SettingsModalProps {
 const SettingsModal: React.FC<SettingsModalProps> = ({ setSettings, settings }) => {
 	const [fontSize, setFontSize] = useLocalStorage("lcc-fontSize", "16px");
 
+	/** Toggle the font size dropdown, stopping propagation to prevent the modal from closing. */
 	const handleClickDropdown = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
 		e.stopPropagation();
 		setSettings({ ...settings, dropdownIsOpen: !settings.dropdownIsOpen });
@@ -98,6 +108,7 @@ interface SettingsListItemProps {
 	handleFontSizeChange: (fontSize: string) => void;
 }
 
+/** Single font size option in the settings dropdown, highlighted when it matches the active size. */
 const SettingsListItem: React.FC<SettingsListItemProps> = ({ fontSize, selectedOption, handleFontSizeChange }) => {
 	return (
 		<li className='relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:bg-dark-fill-3 rounded-lg'>

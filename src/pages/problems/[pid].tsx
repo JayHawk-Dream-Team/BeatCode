@@ -1,3 +1,12 @@
+/**
+ * Statically generated problem page for /problems/[pid].
+ *
+ * getStaticPaths builds one route per locally-defined problem at build time.
+ * getStaticProps injects the matching Problem object as a page prop, serializing
+ * the handlerFunction to a string so it can cross the SSG boundary — it is
+ * re-parsed in the browser by Playground before execution via new Function().
+ */
+
 import Topbar from "@/components/Topbar/Topbar";
 import Workspace from "@/components/Workspace/Workspace";
 import useHasMounted from "@/hooks/useHasMounted";

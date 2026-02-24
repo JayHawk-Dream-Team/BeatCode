@@ -1,3 +1,10 @@
+/**
+ * Central registry mapping problem slugs to their full Problem definitions.
+ *
+ * Add a new entry here after creating the corresponding problem file in this directory.
+ * The key must match the Firestore document id and the URL segment used in /problems/[pid].
+ */
+
 import { Problem } from "../types/problem";
 import { jumpGame } from "./jump-game";
 import { reverseLinkedList } from "./reverse-linked-list";

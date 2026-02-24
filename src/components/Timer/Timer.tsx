@@ -1,3 +1,11 @@
+/**
+ * Optional elapsed-time timer displayed in the problem page Topbar.
+ *
+ * Starts hidden; clicking the clock icon begins counting. The reset icon stops
+ * the timer and returns it to zero. Uses a 1-second setInterval that is cleared
+ * on unmount or when showTimer becomes false to prevent memory leaks.
+ */
+
 import React, { useEffect, useState } from "react";
 import { FiRefreshCcw } from "react-icons/fi";
 
@@ -7,6 +15,7 @@ const Timer: React.FC<TimerProps> = () => {
 	const [showTimer, setShowTimer] = useState<boolean>(false);
 	const [time, setTime] = useState<number>(0);
 
+	/** Format a total-seconds count as HH:MM:SS with zero-padded segments. */
 	const formatTime = (time: number): string => {
 		const hours = Math.floor(time / 3600);
 		const minutes = Math.floor((time % 3600) / 60);

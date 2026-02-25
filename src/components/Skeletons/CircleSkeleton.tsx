@@ -1,8 +1,25 @@
 /**
- * Animated circle placeholder shown while problem difficulty metadata loads.
+ * Artifact:             CircleSkeleton.tsx
+ * Description:          Animated circular pulse placeholder rendered while Firestore
+ *                       difficulty badge metadata loads inside ProblemDescription.
  *
- * Sized to match the difficulty badge circle in ProblemDescription to prevent
- * layout shift when the real content arrives.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        Tailwind CSS animate-pulse utility class must be configured.
+ * Acceptable Input:     No props.
+ * Unacceptable Input:   N/A
+ *
+ * Postconditions:       A pulsing circular placeholder (w-6 h-6) is rendered in the DOM.
+ * Return Values:        React JSX of the circle skeleton element.
+ *
+ * Error/Exception Conditions:
+ *                       None.
+ * Side Effects:         None.
+ * Invariants:           Fixed size — does not respond to prop or content changes.
+ * Known Faults:         None known.
  */
 
 import React from "react";

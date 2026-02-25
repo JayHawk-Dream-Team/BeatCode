@@ -1,10 +1,30 @@
 /**
- * Full problem definition for "Two Sum" (LeetCode #1).
+ * Artifact:             two-sum.ts
+ * Description:          Full problem definition for "Two Sum" (LeetCode #1) — HTML problem
+ *                       statement, examples, constraints, starter code, and a client-side
+ *                       test handler using Node's assert library.
  *
- * Exports the Problem object including the HTML problem statement, examples, constraints,
- * JavaScript starter code template, and a handlerFunction that validates user solutions
- * against three test cases using Node's assert library. The handlerFunction runs
- * entirely in the browser after being re-constructed from its string form via new Function().
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        N/A — exports static data and a pure validation function.
+ * Acceptable Input:     handlerTwoSum accepts a function fn(nums: number[], target: number)
+ *                       that returns an array of two indices [i, j] where nums[i]+nums[j] === target.
+ * Unacceptable Input:   fn that does not return an index pair, returns wrong indices,
+ *                       or throws an exception inside the function body.
+ *
+ * Postconditions:       handlerTwoSum returns true if all three test cases pass.
+ * Return Values:        handlerTwoSum — boolean true on success; throws Error on failure.
+ *                       twoSum — exports a Problem object with all required fields.
+ *
+ * Error/Exception Conditions:
+ *                       assert.deepStrictEqual throws AssertionError if any test case fails;
+ *                       re-thrown as a generic Error with the original assertion message.
+ * Side Effects:         Logs "twoSum handler function error" to the browser console on failure.
+ * Invariants:           Test inputs (nums, targets, answers) are fixed constants at module load.
+ * Known Faults:         None known.
  */
 
 import assert from "assert";

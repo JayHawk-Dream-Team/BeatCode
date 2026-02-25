@@ -1,10 +1,32 @@
 /**
- * Top navigation bar shared between the home page and problem pages.
+ * Artifact:             Topbar.tsx
+ * Description:          Navigation bar shared across all pages — shows the logo and auth
+ *                       controls always; adds prev/next problem navigation and a timer
+ *                       when rendered in problem page mode.
  *
- * In problem page mode (problemPage prop), shows prev/next problem navigation
- * and a live countdown timer. Problem navigation wraps around: forward from the
- * last problem goes to the first, and backward from the first goes to the last.
- * Auth controls (Sign In / avatar tooltip / Logout) are shown on the right in both modes.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        Firebase Auth must be initialized. /public/logo-full.png and
+ *                       /public/avatar.png must exist. On problem pages, router.query.pid
+ *                       must be a valid key in the problems map.
+ * Acceptable Input:     problemPage — optional boolean prop; true on /problems/[pid] pages.
+ * Unacceptable Input:   Using Topbar in problem page mode without a valid pid in the router.
+ *
+ * Postconditions:       Navigation bar is rendered with correct auth state and context controls.
+ * Return Values:        React JSX of the navigation bar element.
+ *
+ * Error/Exception Conditions:
+ *                       handleProblemChange throws if problems[router.query.pid] is undefined
+ *                       (no null guard — assumes pid is always valid on problem pages).
+ * Side Effects:         Calls router.push() to navigate between problems.
+ *                       Sets authModalState.isOpen to trigger the auth modal on Sign In click.
+ * Invariants:           Navigation always wraps around: next after last goes to first,
+ *                       and prev before first goes to last.
+ * Known Faults:         "Premium" link points to an external personal buymeacoffee page,
+ *                       a leftover artifact from the original tutorial codebase.
  */
 
 import { auth } from "@/firebase/firebase";
@@ -31,10 +53,24 @@ const Topbar: React.FC<TopbarProps> = ({ problemPage }) => {
 	const setAuthModalState = useSetRecoilState(authModalState);
 	const router = useRouter();
 
-	/** Navigate to the next or previous problem by order number, wrapping at both ends.
+	/**
+	 * Artifact:             handleProblemChange
+	 * Description:          Navigates to the next or previous problem by order number,
+	 *                       wrapping around at both ends of the problem list.
 	 *
-	 * Searches the local problems map by order value rather than array index to support
-	 * non-contiguous ordering without breaking navigation.
+	 * Preconditions:        router.query.pid must be a valid key in the problems map.
+	 *                       problems map must have contiguous order values starting at 1.
+	 * Acceptable Input:     isForward — boolean; true navigates forward, false navigates back.
+	 * Unacceptable Input:   N/A — called only by button click with a hardcoded boolean.
+	 *
+	 * Postconditions:       Router navigates to /problems/{nextProblemKey}.
+	 * Return Values:        void.
+	 *
+	 * Error/Exception Conditions:
+	 *                       Throws if problems[router.query.pid] is undefined (no null guard).
+	 * Side Effects:         Calls router.push() to navigate to the adjacent problem page.
+	 * Invariants:           Wrap-around always lands on the first or last problem respectively.
+	 * Known Faults:         No null check on problems[router.query.pid]; crashes on invalid pid.
 	 */
 	const handleProblemChange = (isForward: boolean) => {
 		const { order } = problems[router.query.pid as string] as Problem;

@@ -1,8 +1,27 @@
 /**
- * Minimal navbar used exclusively on the /auth landing page.
+ * Artifact:             Navbar.tsx
+ * Description:          Minimal navigation bar used exclusively on the /auth landing page —
+ *                       shows the logo and a Sign In button that opens the auth modal.
  *
- * Shows the logo and a Sign In button that opens the auth modal by setting
- * authModalState.isOpen to true. The main app uses Topbar instead of this component.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        RecoilRoot must be present in the component tree.
+ *                       /public/logo.png must exist as a static asset.
+ * Acceptable Input:     No props.
+ * Unacceptable Input:   N/A
+ *
+ * Postconditions:       The auth modal is opened (isOpen: true) when Sign In is clicked.
+ * Return Values:        React JSX of the navbar element.
+ *
+ * Error/Exception Conditions:
+ *                       None.
+ * Side Effects:         Sets authModalState.isOpen to true on Sign In button click;
+ *                       the AuthModal itself is rendered by the parent auth page.
+ * Invariants:           This component never renders the auth modal directly.
+ * Known Faults:         None known.
  */
 
 import { authModalState } from "@/atoms/authModalAtom";

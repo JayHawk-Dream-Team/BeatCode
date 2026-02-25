@@ -1,9 +1,35 @@
 /**
- * Registration form inside the auth modal.
+ * Artifact:             Signup.tsx
+ * Description:          User registration form rendered inside AuthModal — creates a Firebase
+ *                       Auth account and a matching Firestore user document on success.
  *
- * Creates a Firebase Auth account and immediately writes a matching Firestore user
- * document with empty arrays for likedProblems, dislikedProblems, solvedProblems,
- * and starredProblems. Redirects to home on success.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        Firebase Auth and Firestore must be initialized. RecoilRoot present.
+ * Acceptable Input:     email — valid email string; displayName — non-empty string;
+ *                       password — string meeting Firebase's minimum password requirements.
+ * Unacceptable Input:   Empty fields (caught by alert); weak password (rejected by Firebase);
+ *                       already-registered email (rejected by Firebase with error toast).
+ *
+ * Postconditions:       New Firebase Auth account exists; Firestore "users/{uid}" document
+ *                       created with empty liked/disliked/solved/starred problem arrays.
+ * Return Values:        React JSX of the registration form.
+ *
+ * Error/Exception Conditions:
+ *                       Empty fields — browser alert before submission.
+ *                       Firebase errors (duplicate email, weak password) — toast error.
+ *                       Firebase hook errors — surfaced via useEffect alert.
+ * Side Effects:         Calls Firebase createUserWithEmailAndPassword on submit.
+ *                       Writes a new document to Firestore "users" collection.
+ *                       Shows / dismisses a loading toast around the async operation.
+ *                       Calls router.push("/") on successful registration.
+ * Invariants:           Firestore user document always contains all four array fields on creation.
+ * Known Faults:         If Firestore setDoc fails after Auth creation, the user has a Firebase
+ *                       Auth account but no Firestore document (orphaned account state).
+ *                       Uses browser alert() inconsistently with the toast error pattern.
  */
 
 import { authModalState } from "@/atoms/authModalAtom";
@@ -29,11 +55,29 @@ const Signup: React.FC<SignupProps> = () => {
 		setInputs((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 	};
 
-	/** Create a Firebase Auth account and initialize the user's Firestore document.
+	/**
+	 * Artifact:             handleRegister
+	 * Description:          Creates a Firebase Auth account and initializes the Firestore
+	 *                       user document with empty interaction arrays.
 	 *
-	 * The Firestore document is created here rather than in a Cloud Function to keep the
-	 * architecture serverless. The user document schema must stay in sync with field reads
-	 * in ProblemDescription (liked/disliked/starred/solved arrays) and ProblemsTable.
+	 * Preconditions:        All three input fields must be non-empty; Firebase initialized.
+	 * Acceptable Input:     e — React form submit event; reads inputs from state.
+	 * Unacceptable Input:   Empty email, displayName, or password (guarded by alert).
+	 *
+	 * Postconditions:       Firebase Auth account and Firestore user document both created.
+	 *                       User is redirected to "/" on success.
+	 * Return Values:        Promise<void>.
+	 *
+	 * Error/Exception Conditions:
+	 *                       Empty fields — alert shown, early return.
+	 *                       Firebase errors — toast error shown.
+	 *                       Firestore setDoc failure — error caught, toast shown; Auth account
+	 *                       remains (orphaned if Firestore write fails after Auth creation).
+	 * Side Effects:         Creates Firebase Auth user. Writes Firestore user document.
+	 *                       Shows loading toast; dismisses it in finally block.
+	 *                       Calls router.push("/") on success.
+	 * Invariants:           e.preventDefault() always called. loadingToast always dismissed.
+	 * Known Faults:         Orphaned account possible if setDoc throws after Auth creation.
 	 */
 	const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();

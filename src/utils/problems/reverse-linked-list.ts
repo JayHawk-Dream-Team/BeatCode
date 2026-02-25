@@ -1,9 +1,28 @@
 /**
- * Full problem definition for "Reverse Linked List" (LeetCode #206).
+ * Artifact:             reverse-linked-list.ts
+ * Description:          Full problem definition for "Reverse Linked List" (LeetCode #206) —
+ *                       HTML statement, diagram image, constraints, starter code, and handler.
  *
- * Exports the Problem object including HTML problem statement, examples (with diagram image),
- * constraints, JavaScript starter code template, and a handlerFunction that validates
- * user solutions against test cases using Node's assert library.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        N/A — exports static data and a pure validation function.
+ * Acceptable Input:     Handler accepts fn(head: ListNode | null) returning the head of
+ *                       the reversed linked list.
+ * Unacceptable Input:   fn returning a non-node value, or mutating the test node chain
+ *                       in a way that corrupts subsequent test cases.
+ *
+ * Postconditions:       Handler returns true if all test cases pass.
+ * Return Values:        Handler — boolean true on success; throws Error on failure.
+ *                       reverseLinkedList — exports a Problem object with all required fields.
+ *
+ * Error/Exception Conditions:
+ *                       assert.deepStrictEqual throws AssertionError if any test case fails.
+ * Side Effects:         Logs handler function error to the browser console on failure.
+ * Invariants:           Test node chains and diagram image path are fixed at module load.
+ * Known Faults:         None known.
  */
 
 import assert from "assert";

@@ -1,8 +1,27 @@
 /**
- * Track the current browser window dimensions, updating on resize.
+ * Artifact:             useWindowSize.ts
+ * Description:          Custom hook that tracks browser window width and height,
+ *                       updating state on resize events. SSR-safe with a 1200×800 default.
  *
- * Defaults to 1200×800 when window is not available (SSR context).
- * Used by Workspace to size the confetti canvas to the full viewport on submission success.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        Must be called inside a React function component or custom hook.
+ * Acceptable Input:     No parameters.
+ * Unacceptable Input:   N/A
+ *
+ * Postconditions:       Returns up-to-date viewport dimensions; updates on every resize event.
+ * Return Values:        { width: number, height: number } — current viewport dimensions in
+ *                       pixels; defaults to { width: 1200, height: 800 } in SSR context.
+ *
+ * Error/Exception Conditions:
+ *                       None; window availability is guarded before every access.
+ * Side Effects:         Registers a "resize" event listener on window on mount;
+ *                       removes it on component unmount via useEffect cleanup.
+ * Invariants:           width and height are always positive integers.
+ * Known Faults:         None known.
  */
 
 import { useEffect, useState } from "react";

@@ -1,10 +1,34 @@
 /**
- * Firebase client initialization for BeatCode.
+ * Artifact:             firebase.ts
+ * Description:          Firebase client initialization — creates singleton Auth and
+ *                       Firestore instances shared throughout BeatCode.
  *
- * Initializes the Firebase app (guarding against double-initialization in Next.js
- * hot reload), then exports singleton Auth and Firestore clients used throughout
- * the application. All configuration values are read from NEXT_PUBLIC_FIREBASE_*
- * environment variables defined in .env.local.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        All NEXT_PUBLIC_FIREBASE_* environment variables must be defined
+ *                       in .env.local before the development server or build is started.
+ * Acceptable Input:     Valid Firebase project credentials supplied via environment variables.
+ * Unacceptable Input:   Missing or malformed environment variables; calling initializeApp
+ *                       multiple times with differing configs in the same process.
+ *
+ * Postconditions:       auth and firestore singleton clients are initialized and ready
+ *                       for import by any other module in the application.
+ * Return Values:        Exports { auth, firestore, app } — Firebase Auth instance,
+ *                       Firestore database instance, and the Firebase App object.
+ *
+ * Error/Exception Conditions:
+ *                       Firebase SDK throws FirebaseError if the config values are invalid.
+ *                       getApp() throws if no Firebase app has been initialized yet.
+ * Side Effects:         Registers the Firebase app in the global Firebase app registry;
+ *                       subsequent calls to getApp() elsewhere return this same instance.
+ * Invariants:           Exactly one Firebase app instance exists at runtime.
+ * Known Faults:         Guard condition uses `!getApps.length` (missing parentheses on
+ *                       getApps call) instead of `!getApps().length`, so the guard is
+ *                       always falsy and the fallback getApp() path is always taken.
+ *                       Works in practice because Next.js initializes Firebase separately.
  */
 
 import { initializeApp, getApp, getApps } from "firebase/app";

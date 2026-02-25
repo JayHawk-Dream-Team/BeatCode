@@ -1,12 +1,36 @@
 /**
- * Code editor panel where users write, run, and submit solutions.
+ * Artifact:             Playground.tsx
+ * Description:          Code editor panel — vertically split CodeMirror editor and test
+ *                       case viewer. Handles code persistence, submission, and client-side
+ *                       execution using new Function() validated by Node's assert library.
  *
- * Vertically split between the CodeMirror editor (top) and test case viewer (bottom).
- * User code is persisted to localStorage keyed by problem id so drafts survive page
- * refreshes. On submit, the function name is extracted from the editor content, wrapped
- * in new Function() for client-side execution, and validated by the problem's
- * handlerFunction using Node's assert. Successful submissions update the user's
- * solvedProblems array in Firestore.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        A valid Problem object must be passed. Firebase and localStorage
+ *                       must be accessible. User must be authenticated to submit.
+ * Acceptable Input:     problem — Problem with valid starterCode and handlerFunction string;
+ *                       setSuccess / setSolved — React dispatch functions (boolean).
+ * Unacceptable Input:   Problem missing handlerFunction; null setSuccess or setSolved.
+ *
+ * Postconditions:       On successful submission, solvedProblems in Firestore is updated
+ *                       and setSuccess / setSolved are called with true.
+ * Return Values:        React JSX of the vertically split editor and test case panel.
+ *
+ * Error/Exception Conditions:
+ *                       AssertionError from test cases — toast "One or more test cases failed".
+ *                       SyntaxError / ReferenceError from new Function() — toast with message.
+ *                       Unauthenticated submit — toast "Please login to submit your code".
+ *                       Firestore updateDoc failure — error propagates to the browser console.
+ * Side Effects:         Writes user code to localStorage on every keystroke (key: "code-{pid}").
+ *                       Writes to Firestore solvedProblems array on successful submission.
+ *                       Fires toast notifications and triggers confetti via setSuccess(true).
+ * Invariants:           userCode always mirrors the current CodeMirror editor content.
+ *                       localStorage key format is always "code-{pid}".
+ * Known Faults:         new Function() executes arbitrary user JavaScript with no sandboxing;
+ *                       malicious code could access window, document, or other browser APIs.
  */
 
 import { useState, useEffect } from "react";
@@ -54,11 +78,27 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved 
 		query: { pid },
 	} = useRouter();
 
-	/** Extract, execute, and validate the user's code against the problem's test cases.
+	/**
+	 * Artifact:             handleSubmit
+	 * Description:          Extracts the user's function from the editor, executes it via
+	 *                       new Function(), and validates it against the problem's test cases.
 	 *
-	 * Slices the editor content from the target function name to strip any preamble,
-	 * wraps it in new Function() for browser-side evaluation, then passes it to the
-	 * problem's handlerFunction. Throws and surfaces a toast on assertion or runtime errors.
+	 * Preconditions:        User must be authenticated. problem.starterFunctionName and
+	 *                       problem.handlerFunction must be valid.
+	 * Acceptable Input:     No parameters; reads userCode and problem from closure.
+	 * Unacceptable Input:   N/A — called only by button click.
+	 *
+	 * Postconditions:       On success: Firestore solvedProblems updated, confetti triggered.
+	 *                       On failure: appropriate toast error shown to the user.
+	 * Return Values:        Promise<void> — no return value; effects are via state and Firestore.
+	 *
+	 * Error/Exception Conditions:
+	 *                       AssertionError — caught, toast "One or more test cases failed".
+	 *                       Any other error — caught, toast with error.message.
+	 *                       Not authenticated — early return with toast before execution.
+	 * Side Effects:         May write to Firestore. Shows toast. Calls setSuccess / setSolved.
+	 * Invariants:           userCode is sliced from starterFunctionName forward before eval.
+	 * Known Faults:         No sandbox around new Function(); user code runs with full access.
 	 */
 	const handleSubmit = async () => {
 		if (!user) {
@@ -123,7 +163,24 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved 
 		}
 	}, [pid, user, problem.starterCode]);
 
-	/** Sync editor value to state and persist to localStorage as the user types. */
+	/**
+	 * Artifact:             onChange
+	 * Description:          Syncs the editor value to component state and persists it to
+	 *                       localStorage so drafts survive page refreshes.
+	 *
+	 * Preconditions:        pid must be available from the router query.
+	 * Acceptable Input:     value — the full current string content of the CodeMirror editor.
+	 * Unacceptable Input:   N/A — always called by CodeMirror with a valid string.
+	 *
+	 * Postconditions:       userCode state and localStorage["code-{pid}"] both reflect value.
+	 * Return Values:        void.
+	 *
+	 * Error/Exception Conditions:
+	 *                       localStorage.setItem errors are not caught here (see useLocalStorage).
+	 * Side Effects:         Writes JSON-stringified code to localStorage on every keystroke.
+	 * Invariants:           localStorage key is always "code-" + pid.
+	 * Known Faults:         None known.
+	 */
 	const onChange = (value: string) => {
 		setUserCode(value);
 		localStorage.setItem(`code-${pid}`, JSON.stringify(value));

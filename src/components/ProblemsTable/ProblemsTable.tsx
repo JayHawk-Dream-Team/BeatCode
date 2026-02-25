@@ -1,11 +1,31 @@
 /**
- * Problems table component that fetches and displays the full problem list.
+ * Artifact:             ProblemsTable.tsx
+ * Description:          Renders the problems list table — fetches Firestore problem metadata
+ *                       and the current user's solved problem IDs, with an inline YouTube
+ *                       modal for solution videos.
  *
- * Pulls problem metadata from the Firestore "problems" collection ordered by the
- * "order" field, and separately fetches the current user's solved problem IDs.
- * Problems with a "link" field route to the external LeetCode URL; otherwise they
- * link to the internal /problems/[pid] workspace. Video solutions open in an
- * in-page YouTube modal that closes on Escape or backdrop click.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        Firebase and Firestore must be initialized. The "problems" collection
+ *                       must exist with documents containing id, title, category, difficulty,
+ *                       order fields. setLoadingProblems must be a valid React dispatch fn.
+ * Acceptable Input:     setLoadingProblems — React setState dispatch function (boolean).
+ * Unacceptable Input:   null or undefined setLoadingProblems.
+ *
+ * Postconditions:       Table rows are rendered for each Firestore problem document.
+ *                       Solved checkmarks appear beside problems the authenticated user solved.
+ * Return Values:        React JSX tbody rows and an optional YouTube modal tfoot overlay.
+ *
+ * Error/Exception Conditions:
+ *                       Firestore getDocs errors reject silently; the table renders empty.
+ *                       If the user Firestore document does not exist, solvedProblems stays [].
+ * Side Effects:         Two Firestore reads on mount (problems collection; user document).
+ *                       Registers and removes a keydown listener for Escape to close modal.
+ * Invariants:           solvedProblems is always an array, never null or undefined.
+ * Known Faults:         console.log("solvedProblems", solvedProblems) left in production code.
  */
 
 import Link from "next/link";
@@ -125,10 +145,24 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems }) => 
 };
 export default ProblemsTable;
 
-/** Fetch all problems from Firestore ordered by the "order" field.
+/**
+ * Artifact:             useGetProblems
+ * Description:          Custom hook — fetches all problems from Firestore ordered by the
+ *                       "order" field and signals loading state to the parent component.
  *
- * Signals loading state to the parent via setLoadingProblems so the skeleton
- * is displayed while the query is in flight.
+ * Preconditions:        Firestore must be initialized; "problems" collection must exist.
+ * Acceptable Input:     setLoadingProblems — React dispatch for a boolean loading flag.
+ * Unacceptable Input:   null or undefined setLoadingProblems.
+ *
+ * Postconditions:       problems state holds all DBProblem documents sorted by order;
+ *                       setLoadingProblems is called false when the fetch completes.
+ * Return Values:        DBProblem[] — array of all problem metadata documents.
+ *
+ * Error/Exception Conditions:
+ *                       getDocs errors propagate as unhandled promise rejections.
+ * Side Effects:         Reads the "problems" Firestore collection on mount.
+ * Invariants:           setLoadingProblems transitions to false exactly once per mount.
+ * Known Faults:         None known.
  */
 function useGetProblems(setLoadingProblems: React.Dispatch<React.SetStateAction<boolean>>) {
 	const [problems, setProblems] = useState<DBProblem[]>([]);
@@ -152,10 +186,25 @@ function useGetProblems(setLoadingProblems: React.Dispatch<React.SetStateAction<
 	return problems;
 }
 
-/** Return the list of problem IDs the current user has solved.
+/**
+ * Artifact:             useGetSolvedProblems
+ * Description:          Custom hook — returns the list of problem IDs the current user
+ *                       has solved, resetting to empty on sign-out.
  *
- * Resets to an empty array on sign-out so solved checkmarks disappear
- * immediately without requiring a page refresh.
+ * Preconditions:        Firebase Auth and Firestore must be initialized.
+ * Acceptable Input:     No parameters; reads user auth state internally.
+ * Unacceptable Input:   N/A
+ *
+ * Postconditions:       solvedProblems contains the user's solved problem ID array,
+ *                       or [] when no user is authenticated.
+ * Return Values:        string[] — array of solved problem ids (e.g. ["two-sum"]).
+ *
+ * Error/Exception Conditions:
+ *                       If the user Firestore document does not exist, solvedProblems
+ *                       remains [] (no error is thrown).
+ * Side Effects:         Reads the "users/{uid}" Firestore document when a user is present.
+ * Invariants:           Return value is always an array; never null or undefined.
+ * Known Faults:         None known.
  */
 function useGetSolvedProblems() {
 	const [solvedProblems, setSolvedProblems] = useState<string[]>([]);

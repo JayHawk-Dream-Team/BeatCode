@@ -1,10 +1,29 @@
 /**
- * Authentication landing page at /auth.
+ * Artifact:             pages/auth/index.tsx
+ * Description:          Authentication landing page at /auth — displays a hero image and
+ *                       Navbar. Redirects authenticated users to home; renders AuthModal
+ *                       when authModalState.isOpen is true.
  *
- * Shows a hero image and a Navbar with a Sign In button. Redirects authenticated
- * users back to the home page immediately on mount. The AuthModal overlay
- * (login / signup / reset password) is conditionally rendered based on
- * the Recoil authModalState atom.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        Firebase Auth must be initialized. RecoilRoot must be present.
+ *                       /public/hero.png must exist as a static asset.
+ * Acceptable Input:     N/A — no props; auth state is read from Firebase via useAuthState.
+ * Unacceptable Input:   N/A
+ *
+ * Postconditions:       Authenticated users are immediately redirected to "/".
+ *                       Unauthenticated users see the landing page with auth controls.
+ * Return Values:        React JSX tree or null (while Firebase auth is loading or redirecting).
+ *
+ * Error/Exception Conditions:
+ *                       Firebase auth hook errors are available in the `error` variable
+ *                       from useAuthState but are not currently handled or displayed.
+ * Side Effects:         Calls router.push("/") when a logged-in user visits this page.
+ * Invariants:           AuthModal is only mounted when authModal.isOpen is true.
+ * Known Faults:         None known.
  */
 
 import { authModalState } from "@/atoms/authModalAtom";

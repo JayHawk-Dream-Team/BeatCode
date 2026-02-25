@@ -1,9 +1,28 @@
 /**
- * Auth modal container that renders the correct form based on authModalState.
+ * Artifact:             AuthModal.tsx
+ * Description:          Modal container that renders Login, Signup, or ResetPassword based
+ *                       on authModalState.type, with a semi-transparent backdrop overlay.
  *
- * Mounts over a semi-transparent backdrop; clicking the backdrop or pressing Escape
- * closes the modal and resets the type to "login". The active view (Login, Signup,
- * or ResetPassword) is driven by the Recoil authModalState atom.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        RecoilRoot must be present. authModalState.isOpen must be true
+ *                       for the modal to be rendered (controlled by parent components).
+ * Acceptable Input:     No props; reads authModalState.type from Recoil.
+ * Unacceptable Input:   N/A
+ *
+ * Postconditions:       The appropriate auth form view is displayed based on type.
+ *                       Closing (backdrop click or Escape) resets type to "login".
+ * Return Values:        React JSX of the backdrop overlay and centered modal card.
+ *
+ * Error/Exception Conditions:
+ *                       Errors inside Login, Signup, or ResetPassword propagate upward.
+ * Side Effects:         Registers and removes a keydown listener for Escape on mount.
+ *                       Clicking the backdrop calls closeModal to update Recoil state.
+ * Invariants:           authModal.type is always "login" after the modal is closed.
+ * Known Faults:         None known.
  */
 
 import { authModalState } from "@/atoms/authModalAtom";
@@ -46,10 +65,24 @@ const AuthModal: React.FC<AuthModalProps> = () => {
 };
 export default AuthModal;
 
-/** Return a close handler that resets modal state and attaches an Escape key listener.
+/**
+ * Artifact:             useCloseModal
+ * Description:          Custom hook returning a close handler that resets authModalState
+ *                       and attaches an Escape keydown listener for keyboard dismissal.
  *
- * Extracted as a hook so the escape listener is set up once on mount and cleaned
- * up when the modal unmounts, rather than re-registering on each render.
+ * Preconditions:        RecoilRoot must be present; authModalState atom must be registered.
+ * Acceptable Input:     No parameters.
+ * Unacceptable Input:   N/A
+ *
+ * Postconditions:       closeModal is stable across renders; Escape listener is registered.
+ * Return Values:        closeModal — () => void function that sets isOpen: false, type: "login".
+ *
+ * Error/Exception Conditions:
+ *                       None.
+ * Side Effects:         Registers a keydown listener on window on mount; removes it on unmount.
+ *                       Calling the returned closeModal updates Recoil authModalState.
+ * Invariants:           The Escape listener is attached exactly once per modal mount.
+ * Known Faults:         None known.
  */
 function useCloseModal() {
 	const setAuthModal = useSetRecoilState(authModalState);

@@ -1,12 +1,28 @@
 /**
- * Shared type definitions for the two-layer problem data model.
+ * Artifact:             problem.ts
+ * Description:          TypeScript type definitions for the two-layer problem data model:
+ *                       Problem (full local definition) and DBProblem (Firestore metadata).
  *
- * Problem holds the full local definition used in SSG pages and client-side code
- * execution — including the HTML problem statement, test examples, starter code, and
- * the handlerFunction that validates user submissions in the browser.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
  *
- * DBProblem is the lightweight Firestore representation used in the problems list,
- * containing only metadata (difficulty, category, likes, videoId, etc.).
+ * Preconditions:        N/A — file contains only type definitions; no runtime behavior.
+ * Acceptable Input:     N/A — compile-time types only.
+ * Unacceptable Input:   N/A
+ *
+ * Postconditions:       N/A — no runtime state is modified.
+ * Return Values:        Exports types: Example, Problem, DBProblem.
+ *
+ * Error/Exception Conditions:
+ *                       N/A — type mismatches are caught at compile time by TypeScript.
+ * Side Effects:         None.
+ * Invariants:           Problem.handlerFunction is typed as `((fn: any) => boolean) | string`
+ *                       because it is serialized to a string during SSG (getStaticProps)
+ *                       and re-evaluated in the browser via new Function().
+ * Known Faults:         The `any` type in handlerFunction's signature bypasses TypeScript
+ *                       safety for the user-submitted function argument.
  */
 
 export type Example = {

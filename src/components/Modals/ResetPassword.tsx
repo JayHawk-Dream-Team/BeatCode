@@ -1,8 +1,30 @@
 /**
- * Password reset form inside the auth modal.
+ * Artifact:             ResetPassword.tsx
+ * Description:          Password reset form rendered inside AuthModal — sends a Firebase
+ *                       password reset email and confirms success via toast notification.
  *
- * Sends a Firebase password reset email and shows a success toast.
- * No redirect occurs after submission — the user returns to the login view manually.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        Firebase Auth must be initialized. Email/Password sign-in provider
+ *                       must be enabled in the Firebase project.
+ * Acceptable Input:     email — string in valid email format registered with Firebase Auth.
+ * Unacceptable Input:   Empty email string; email not registered in Firebase (yields error).
+ *
+ * Postconditions:       Firebase dispatches a password reset email to the provided address.
+ * Return Values:        React JSX of the reset password form.
+ *
+ * Error/Exception Conditions:
+ *                       Firebase errors (invalid email, user not found) — surfaced via alert().
+ * Side Effects:         Calls Firebase sendPasswordResetEmail on form submit.
+ *                       Shows a success toast on confirmation from Firebase.
+ * Invariants:           No redirect or modal state change occurs after submission; the user
+ *                       must close the modal manually after the reset email is sent.
+ * Known Faults:         Firebase does not distinguish "email not found" from success (by design
+ *                       for security), so the user may not know if the address is unregistered.
+ *                       Errors surfaced via alert() rather than toast (inconsistent UX).
  */
 
 import { auth } from "@/firebase/firebase";

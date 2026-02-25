@@ -1,8 +1,29 @@
 /**
- * Central registry mapping problem slugs to their full Problem definitions.
+ * Artifact:             problems/index.ts
+ * Description:          Central registry mapping problem slug strings to full Problem
+ *                       definitions for use in SSG and client-side code execution.
  *
- * Add a new entry here after creating the corresponding problem file in this directory.
- * The key must match the Firestore document id and the URL segment used in /problems/[pid].
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        Each imported problem file must export a valid Problem object
+ *                       conforming to the Problem type in utils/types/problem.ts.
+ * Acceptable Input:     N/A — static module-level map with no dynamic input.
+ * Unacceptable Input:   N/A
+ *
+ * Postconditions:       The `problems` map is populated and ready for import by pages
+ *                       and the Topbar navigator.
+ * Return Values:        Exports { problems: ProblemMap } — object keyed by slug string.
+ *
+ * Error/Exception Conditions:
+ *                       Missing or malformed problem exports cause TypeScript compile errors.
+ * Side Effects:         None.
+ * Invariants:           Each key must match the Firestore document id and the /problems/[pid]
+ *                       URL segment; mismatches cause 404s on problem pages.
+ * Known Faults:         Only 5 of the 100+ problems in clean_problems.json are fully
+ *                       implemented here; the remaining problems link out to LeetCode.
  */
 
 import { Problem } from "../types/problem";

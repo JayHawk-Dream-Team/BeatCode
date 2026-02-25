@@ -1,9 +1,28 @@
 /**
- * Optional elapsed-time timer displayed in the problem page Topbar.
+ * Artifact:             Timer.tsx
+ * Description:          Optional elapsed-time timer in the Topbar — starts hidden and
+ *                       counts up in seconds when the clock icon is clicked; reset icon
+ *                       stops and zeroes the count.
  *
- * Starts hidden; clicking the clock icon begins counting. The reset icon stops
- * the timer and returns it to zero. Uses a 1-second setInterval that is cleared
- * on unmount or when showTimer becomes false to prevent memory leaks.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        No external dependencies beyond React and react-icons.
+ * Acceptable Input:     No props.
+ * Unacceptable Input:   N/A
+ *
+ * Postconditions:       Timer increments by 1 per second while showTimer is true;
+ *                       stops and resets to 0 when the reset icon is clicked.
+ * Return Values:        React JSX of the timer display or the start icon.
+ *
+ * Error/Exception Conditions:
+ *                       None; the setInterval is always cleared via useEffect cleanup.
+ * Side Effects:         Registers a 1-second setInterval while running; clears the
+ *                       interval on component unmount or when showTimer becomes false.
+ * Invariants:           time is always a non-negative integer (seconds elapsed).
+ * Known Faults:         None known.
  */
 
 import React, { useEffect, useState } from "react";
@@ -15,7 +34,24 @@ const Timer: React.FC<TimerProps> = () => {
 	const [showTimer, setShowTimer] = useState<boolean>(false);
 	const [time, setTime] = useState<number>(0);
 
-	/** Format a total-seconds count as HH:MM:SS with zero-padded segments. */
+	/**
+	 * Artifact:             formatTime
+	 * Description:          Converts a total elapsed seconds count into a zero-padded
+	 *                       HH:MM:SS string for display.
+	 *
+	 * Preconditions:        time must be a non-negative integer.
+	 * Acceptable Input:     time — non-negative integer representing elapsed seconds.
+	 * Unacceptable Input:   Negative integers; non-integer numbers (produce incorrect output).
+	 *
+	 * Postconditions:       Returns a correctly formatted time string.
+	 * Return Values:        string — formatted as "HH:MM:SS" with zero-padded segments.
+	 *
+	 * Error/Exception Conditions:
+	 *                       None; Math.floor handles all non-negative integer inputs.
+	 * Side Effects:         None — pure function with no state or external dependencies.
+	 * Invariants:           Output string always matches /^\d{2}:\d{2}:\d{2}$/ pattern.
+	 * Known Faults:         None known.
+	 */
 	const formatTime = (time: number): string => {
 		const hours = Math.floor(time / 3600);
 		const minutes = Math.floor((time % 3600) / 60);

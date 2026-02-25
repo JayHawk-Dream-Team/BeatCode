@@ -1,9 +1,28 @@
 /**
- * Home page displaying the full problems list.
+ * Artifact:             pages/index.tsx
+ * Description:          Home page listing all problems — shows an animated loading skeleton
+ *                       while Firestore data is fetched, then renders ProblemsTable.
  *
- * Renders a pulse skeleton while Firestore data loads, then hands off to
- * ProblemsTable which owns the data-fetching and rendering logic. useHasMounted
- * prevents hydration mismatches from SSR/CSR differences on the skeleton animation.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        Firebase must be configured; Firestore "problems" collection must
+ *                       exist. RecoilRoot must be present (provided by _app.tsx).
+ * Acceptable Input:     N/A — no props; data is fetched client-side by ProblemsTable.
+ * Unacceptable Input:   N/A
+ *
+ * Postconditions:       The full problems list is displayed once Firestore loading completes.
+ * Return Values:        React JSX tree, or null during SSR before client mount.
+ *
+ * Error/Exception Conditions:
+ *                       Firestore fetch errors are handled silently inside ProblemsTable;
+ *                       the table may render empty if the collection is unreachable.
+ * Side Effects:         Triggers a Firestore query on mount via ProblemsTable.
+ * Invariants:           loadingProblems transitions from true to false exactly once per load;
+ *                       the skeleton is shown only while loadingProblems is true.
+ * Known Faults:         None known.
  */
 
 import ProblemsTable from "@/components/ProblemsTable/ProblemsTable";

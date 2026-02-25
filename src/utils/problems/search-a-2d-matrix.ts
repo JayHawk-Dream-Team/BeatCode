@@ -1,9 +1,27 @@
 /**
- * Full problem definition for "Search a 2D Matrix" (LeetCode #74).
+ * Artifact:             search-a-2d-matrix.ts
+ * Description:          Full problem definition for "Search a 2D Matrix" (LeetCode #74) —
+ *                       HTML statement, diagram images, constraints, starter code, and handler.
  *
- * Exports the Problem object including HTML problem statement, examples (with diagram images),
- * constraints, JavaScript starter code template, and a handlerFunction that validates
- * user solutions against test cases using Node's assert library.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        N/A — exports static data and a pure validation function.
+ * Acceptable Input:     Handler accepts fn(matrix: number[][], target: number) returning
+ *                       a boolean indicating whether target exists in the matrix.
+ * Unacceptable Input:   fn that does not return a boolean or throws unexpectedly.
+ *
+ * Postconditions:       Handler returns true if all test cases pass.
+ * Return Values:        Handler — boolean true on success; throws Error on failure.
+ *                       search2DMatrix — exports a Problem object with all required fields.
+ *
+ * Error/Exception Conditions:
+ *                       assert.deepStrictEqual throws AssertionError if any test case fails.
+ * Side Effects:         Logs handler function error to the browser console on failure.
+ * Invariants:           Test matrices, targets, and diagram image paths are fixed at module load.
+ * Known Faults:         None known.
  */
 
 import assert from "assert";

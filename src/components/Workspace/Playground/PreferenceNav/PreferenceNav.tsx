@@ -1,10 +1,32 @@
 /**
- * Toolbar above the code editor for editor preferences and view controls.
+ * Artifact:             PreferenceNav.tsx
+ * Description:          Toolbar above the code editor showing the active language,
+ *                       a settings button, and a fullscreen toggle. Syncs fullscreen
+ *                       icon state via vendor-prefixed fullscreenchange events.
  *
- * Shows the active language (JavaScript, fixed) and buttons to open SettingsModal
- * and toggle fullscreen mode. Listens for browser fullscreen change events —
- * including vendor-prefixed variants — to keep the icon in sync when the user
- * exits fullscreen via Escape rather than the button.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        Must run in a browser environment (uses document.fullscreenElement).
+ *                       settings and setSettings must be provided by Playground.
+ * Acceptable Input:     settings — ISettings with settingsModalIsOpen, dropdownIsOpen, fontSize;
+ *                       setSettings — React dispatch for ISettings state.
+ * Unacceptable Input:   null or undefined settings or setSettings.
+ *
+ * Postconditions:       SettingsModal is rendered when settings.settingsModalIsOpen is true.
+ *                       isFullScreen always reflects the actual browser fullscreen state.
+ * Return Values:        React JSX of the preference navigation bar.
+ *
+ * Error/Exception Conditions:
+ *                       document.requestFullscreen() rejects (Promise) if permissions denied.
+ *                       document.exitFullscreen() rejects if fullscreen is not currently active.
+ * Side Effects:         Calls browser fullscreen APIs on button click.
+ *                       Registers vendor-prefixed fullscreenchange listeners on mount.
+ * Invariants:           isFullScreen reflects the true browser fullscreen state at all times.
+ * Known Faults:         The fullscreenchange event listeners are never removed on unmount
+ *                       (no cleanup return in useEffect), causing a potential memory leak.
  */
 
 import { useState, useEffect } from "react";
@@ -20,7 +42,26 @@ type PreferenceNavProps = {
 const PreferenceNav: React.FC<PreferenceNavProps> = ({ setSettings, settings }) => {
 	const [isFullScreen, setIsFullScreen] = useState(false);
 
-	/** Toggle browser fullscreen and sync the local icon state. */
+	/**
+	 * Artifact:             handleFullScreen
+	 * Description:          Toggles browser fullscreen on / off and flips the local
+	 *                       isFullScreen flag to update the icon.
+	 *
+	 * Preconditions:        Must run in a browser with Fullscreen API support.
+	 * Acceptable Input:     No parameters.
+	 * Unacceptable Input:   N/A — called only by button click.
+	 *
+	 * Postconditions:       Browser enters or exits fullscreen; isFullScreen is toggled.
+	 * Return Values:        void.
+	 *
+	 * Error/Exception Conditions:
+	 *                       requestFullscreen / exitFullscreen may reject if called at the
+	 *                       wrong time (e.g., outside a user gesture) — rejection is unhandled.
+	 * Side Effects:         Calls document.documentElement.requestFullscreen() or
+	 *                       document.exitFullscreen() depending on current state.
+	 * Invariants:           isFullScreen is always the boolean inverse of its previous value.
+	 * Known Faults:         None known.
+	 */
 	const handleFullScreen = () => {
 		if (isFullScreen) {
 			document.exitFullscreen();

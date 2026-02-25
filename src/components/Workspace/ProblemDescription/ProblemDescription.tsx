@@ -1,10 +1,36 @@
 /**
- * Left pane displaying problem metadata, statement, examples, and user interactions.
+ * Artifact:             ProblemDescription.tsx
+ * Description:          Left-pane component displaying the problem statement, examples,
+ *                       constraints, difficulty badge, and user interaction controls
+ *                       (like, dislike, star) backed by atomic Firestore transactions.
  *
- * Fetches the live Firestore problem record for dynamic data (difficulty, likes, dislikes)
- * while using the SSG-injected Problem prop for static HTML content. Like, dislike, and
- * star actions use Firestore transactions to atomically update both the problem document
- * and the user document, preventing race conditions on concurrent writes.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        Firebase and Firestore must be initialized. "problems" and "users"
+ *                       Firestore collections must exist. problem prop must be the SSG-
+ *                       injected Problem object with a valid id field.
+ * Acceptable Input:     problem — Problem object with id, title, problemStatement, examples,
+ *                       constraints; _solved — boolean passed down from Workspace.
+ * Unacceptable Input:   null or undefined problem; Problem object missing the id field.
+ *
+ * Postconditions:       Problem is displayed with live like/dislike/star counts from Firestore.
+ *                       User interaction state (liked, disliked, starred) is reflected immediately.
+ * Return Values:        React JSX of the full left-pane problem description view.
+ *
+ * Error/Exception Conditions:
+ *                       Like/dislike/star without auth — toast shown, action aborted.
+ *                       Firestore transaction failure — error propagates to the console only.
+ *                       Missing Firestore problem document — currentProblem remains null.
+ * Side Effects:         Reads Firestore on mount (problem doc and user doc).
+ *                       Writes to both problem doc and user doc on like, dislike, or star.
+ *                       updating flag serializes writes to prevent concurrent Firestore ops.
+ * Invariants:           liked and disliked are never both true simultaneously.
+ *                       updating is always reset to false after each async operation completes.
+ * Known Faults:         problemStatement and constraints are rendered via dangerouslySetInnerHTML;
+ *                       content must come only from trusted local TS files, never user input.
  */
 
 import CircleSkeleton from "@/components/Skeletons/CircleSkeleton";
@@ -30,10 +56,26 @@ const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solve
 	const { liked, disliked, solved, setData, starred } = useGetUsersDataOnProblem(problem.id);
 	const [updating, setUpdating] = useState(false);
 
-	/** Fetch both the user document and the problem document within a single transaction.
+	/**
+	 * Artifact:             returnUserDataAndProblemData
+	 * Description:          Fetches both the user document and problem document within a
+	 *                       Firestore transaction, returning refs and snapshots for both.
 	 *
-	 * Centralizes ref/snapshot retrieval shared by handleLike, handleDislike, and handleStar
-	 * so each handler stays focused on its specific update logic.
+	 * Preconditions:        user must be non-null; transaction must be an active Firestore
+	 *                       transaction object passed from runTransaction.
+	 * Acceptable Input:     transaction — active Firestore Transaction object.
+	 * Unacceptable Input:   null or undefined transaction; called outside runTransaction.
+	 *
+	 * Postconditions:       Both Firestore documents have been read within the transaction.
+	 * Return Values:        { userDoc, problemDoc, userRef, problemRef } — Firestore document
+	 *                       snapshots and references for the user and problem documents.
+	 *
+	 * Error/Exception Conditions:
+	 *                       Throws if user is null (user!.uid will throw).
+	 *                       Throws if Firestore read fails inside the transaction.
+	 * Side Effects:         Reads two Firestore documents inside the provided transaction.
+	 * Invariants:           Always reads both documents within the same transaction context.
+	 * Known Faults:         None known.
 	 */
 	const returnUserDataAndProblemData = async (transaction: any) => {
 		const userRef = doc(firestore, "users", user!.uid);
@@ -43,10 +85,26 @@ const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solve
 		return { userDoc, problemDoc, userRef, problemRef };
 	};
 
-	/** Toggle the user's like, handling the unlike and dislike-to-like cases.
+	/**
+	 * Artifact:             handleLike
+	 * Description:          Toggles the user's like on this problem using a Firestore
+	 *                       transaction — handles unlike and dislike-to-like conversion.
 	 *
-	 * Three branches: already liked (remove), currently disliked (flip to like), neither (add).
-	 * All Firestore writes are batched in a single transaction for consistency.
+	 * Preconditions:        User must be authenticated; updating must be false.
+	 * Acceptable Input:     No parameters; reads liked, disliked from closure state.
+	 * Unacceptable Input:   N/A — called only by button click.
+	 *
+	 * Postconditions:       Firestore problem likes count and user likedProblems array
+	 *                       are updated atomically. Local state is updated optimistically.
+	 * Return Values:        Promise<void>.
+	 *
+	 * Error/Exception Conditions:
+	 *                       Not authenticated — toast shown, early return.
+	 *                       Firestore transaction failure — error propagates to console.
+	 * Side Effects:         Writes to "problems/{id}" and "users/{uid}" in one transaction.
+	 *                       Sets updating to true during the operation to block concurrent calls.
+	 * Invariants:           liked and disliked are never both true after this function returns.
+	 * Known Faults:         None known.
 	 */
 	const handleLike = async () => {
 		if (!user) {
@@ -99,7 +157,26 @@ const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solve
 		setUpdating(false);
 	};
 
-	/** Toggle the user's dislike, handling the un-dislike and like-to-dislike cases. */
+	/**
+	 * Artifact:             handleDislike
+	 * Description:          Toggles the user's dislike on this problem — handles un-dislike
+	 *                       and like-to-dislike conversion via Firestore transaction.
+	 *
+	 * Preconditions:        User must be authenticated; updating must be false.
+	 * Acceptable Input:     No parameters; reads liked, disliked from closure state.
+	 * Unacceptable Input:   N/A — called only by button click.
+	 *
+	 * Postconditions:       Firestore problem dislikes count and user dislikedProblems array
+	 *                       are updated atomically. Local state is updated optimistically.
+	 * Return Values:        Promise<void>.
+	 *
+	 * Error/Exception Conditions:
+	 *                       Not authenticated — toast shown, early return.
+	 *                       Firestore transaction failure — error propagates to console.
+	 * Side Effects:         Writes to "problems/{id}" and "users/{uid}" in one transaction.
+	 * Invariants:           liked and disliked are never both true after this function returns.
+	 * Known Faults:         None known.
+	 */
 	const handleDislike = async () => {
 		if (!user) {
 			toast.error("You must be logged in to dislike a problem", { position: "top-left", theme: "dark" });
@@ -148,7 +225,27 @@ const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solve
 		setUpdating(false);
 	};
 
-	/** Toggle the user's starred status for this problem. */
+	/**
+	 * Artifact:             handleStar
+	 * Description:          Toggles the user's starred status for this problem via a
+	 *                       direct Firestore arrayUnion / arrayRemove update.
+	 *
+	 * Preconditions:        User must be authenticated; updating must be false.
+	 * Acceptable Input:     No parameters; reads starred from closure state.
+	 * Unacceptable Input:   N/A — called only by button click.
+	 *
+	 * Postconditions:       "users/{uid}".starredProblems is updated in Firestore;
+	 *                       local starred state is updated optimistically.
+	 * Return Values:        Promise<void>.
+	 *
+	 * Error/Exception Conditions:
+	 *                       Not authenticated — toast shown, early return.
+	 *                       Firestore updateDoc failure — error propagates to console.
+	 * Side Effects:         Writes to "users/{uid}" Firestore document (no transaction needed
+	 *                       since only the user document is modified).
+	 * Invariants:           updating is always reset to false after the operation completes.
+	 * Known Faults:         None known.
+	 */
 	const handleStar = async () => {
 		if (!user) {
 			toast.error("You must be logged in to star a problem", { position: "top-left", theme: "dark" });
@@ -286,10 +383,26 @@ const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solve
 };
 export default ProblemDescription;
 
-/** Fetch the live Firestore problem record and derive its difficulty CSS class.
+/**
+ * Artifact:             useGetCurrentProblem
+ * Description:          Custom hook — fetches the live Firestore problem record for a given
+ *                       problemId and derives the Tailwind difficulty CSS class string.
  *
- * Runs once per problemId change. Returns a loading flag so callers can display
- * skeleton placeholders while the fetch is in flight.
+ * Preconditions:        Firestore must be initialized; "problems" collection must exist.
+ * Acceptable Input:     problemId — non-empty string matching a Firestore document id.
+ * Unacceptable Input:   Empty string or id that does not exist in Firestore.
+ *
+ * Postconditions:       currentProblem holds the DBProblem record; loading is false;
+ *                       problemDifficultyClass is set to the appropriate CSS class.
+ * Return Values:        { currentProblem: DBProblem | null, loading: boolean,
+ *                         problemDifficultyClass: string, setCurrentProblem: Dispatch }.
+ *
+ * Error/Exception Conditions:
+ *                       Firestore getDoc failure propagates as an unhandled rejection.
+ *                       Non-existent problemId leaves currentProblem as null.
+ * Side Effects:         Reads one Firestore document on mount and on problemId change.
+ * Invariants:           loading is true during the fetch and false after it completes.
+ * Known Faults:         None known.
  */
 function useGetCurrentProblem(problemId: string) {
 	const [currentProblem, setCurrentProblem] = useState<DBProblem | null>(null);
@@ -322,10 +435,26 @@ function useGetCurrentProblem(problemId: string) {
 	return { currentProblem, loading, problemDifficultyClass, setCurrentProblem };
 }
 
-/** Load the current user's interaction state (liked, disliked, starred, solved) for a problem.
+/**
+ * Artifact:             useGetUsersDataOnProblem
+ * Description:          Custom hook — loads the current user's interaction state (liked,
+ *                       disliked, starred, solved) for a given problem, resetting on sign-out.
  *
- * Resets all flags to false when the user signs out or the problem changes,
- * ensuring stale state from a previous session is never displayed.
+ * Preconditions:        Firebase Auth and Firestore must be initialized.
+ * Acceptable Input:     problemId — non-empty string matching a Firestore document id.
+ * Unacceptable Input:   Empty string or null problemId.
+ *
+ * Postconditions:       data reflects the user's current interaction flags for problemId,
+ *                       or all-false when no user is authenticated.
+ * Return Values:        { liked: boolean, disliked: boolean, starred: boolean,
+ *                         solved: boolean, setData: Dispatch }.
+ *
+ * Error/Exception Conditions:
+ *                       If the user Firestore document does not exist, flags remain false.
+ * Side Effects:         Reads "users/{uid}" Firestore document when a user is authenticated.
+ *                       Resets all flags to false via cleanup on user sign-out or problem change.
+ * Invariants:           All four flags are always boolean; never null or undefined.
+ * Known Faults:         None known.
  */
 function useGetUsersDataOnProblem(problemId: string) {
 	const [data, setData] = useState({ liked: false, disliked: false, starred: false, solved: false });

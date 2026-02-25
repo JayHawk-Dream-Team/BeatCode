@@ -1,9 +1,27 @@
 /**
- * Sticky footer bar at the bottom of the code editor panel.
+ * Artifact:             EditorFooter.tsx
+ * Description:          Sticky footer bar at the bottom of the Playground panel containing
+ *                       a decorative Console toggle and the Run / Submit action buttons.
  *
- * Contains the Console toggle (currently decorative) and the Run / Submit buttons.
- * Both Run and Submit trigger the same handleSubmit callback — the distinction
- * between them is visual only in this implementation.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        handleSubmit must be a callable function provided by Playground.
+ * Acceptable Input:     handleSubmit — async function with no parameters that triggers
+ *                       code extraction, execution, and Firestore update on success.
+ * Unacceptable Input:   null or undefined handleSubmit.
+ *
+ * Postconditions:       Clicking Run or Submit invokes handleSubmit.
+ * Return Values:        React JSX of the footer bar.
+ *
+ * Error/Exception Conditions:
+ *                       Errors thrown by handleSubmit are caught and handled inside Playground.
+ * Side Effects:         Calls handleSubmit on button click, which may write to Firestore.
+ * Invariants:           Both Run and Submit call the same handleSubmit function; there is
+ *                       no behavioral distinction between the two buttons.
+ * Known Faults:         The Console button does not open a real console; it is decorative only.
  */
 
 import React from "react";

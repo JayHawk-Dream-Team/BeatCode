@@ -1,9 +1,28 @@
 /**
- * Full problem definition for "Valid Parentheses" (LeetCode #20).
+ * Artifact:             valid-parentheses.ts
+ * Description:          Full problem definition for "Valid Parentheses" (LeetCode #20) —
+ *                       HTML statement, examples, constraints, starter code, and a client-side
+ *                       test handler using Node's assert library.
  *
- * Exports the Problem object including HTML problem statement, examples, constraints,
- * JavaScript starter code template, and a handlerFunction that validates user solutions
- * against test cases using Node's assert library.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        N/A — exports static data and a pure validation function.
+ * Acceptable Input:     Handler accepts fn(s: string) returning a boolean indicating
+ *                       whether the string contains only valid matching bracket pairs.
+ * Unacceptable Input:   fn that does not return a boolean or throws unexpectedly.
+ *
+ * Postconditions:       Handler returns true if all test cases pass.
+ * Return Values:        Handler — boolean true on success; throws Error on failure.
+ *                       validParentheses — exports a Problem object with all required fields.
+ *
+ * Error/Exception Conditions:
+ *                       assert.deepStrictEqual throws AssertionError if any test case fails.
+ * Side Effects:         Logs handler function error to the browser console on failure.
+ * Invariants:           Test input strings and expected answers are fixed at module load time.
+ * Known Faults:         None known.
  */
 
 import assert from "assert";

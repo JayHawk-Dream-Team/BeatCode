@@ -1,10 +1,30 @@
 /**
- * Editor settings modal for configuring code editor preferences.
+ * Artifact:             SettingsModal.tsx
+ * Description:          Modal dialog for configuring code editor preferences — currently
+ *                       exposes font size selection, persisted to localStorage.
  *
- * Currently exposes only font size, which is persisted to localStorage via
- * useLocalStorage and immediately applied to the CodeMirror instance through
- * the shared ISettings state. New settings should follow the same pattern:
- * add to ISettings, persist with useLocalStorage, and apply in Playground.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        settings and setSettings must be provided by Playground.
+ *                       localStorage must be accessible (useLocalStorage is SSR-safe).
+ * Acceptable Input:     settings — ISettings object; setSettings — React dispatch function;
+ *                       font size selections must be values within EDITOR_FONT_SIZES.
+ * Unacceptable Input:   null or undefined settings or setSettings; font sizes outside
+ *                       the EDITOR_FONT_SIZES list.
+ *
+ * Postconditions:       Selected font size is applied to CodeMirror via shared ISettings
+ *                       and persisted to localStorage under key "lcc-fontSize".
+ * Return Values:        React JSX of the settings modal dialog.
+ *
+ * Error/Exception Conditions:
+ *                       localStorage write errors are caught internally by useLocalStorage.
+ * Side Effects:         Writes selected font size to localStorage on each font selection.
+ *                       Updates shared ISettings state, immediately affecting the editor.
+ * Invariants:           EDITOR_FONT_SIZES is fixed as ["12px" .. "18px"] at module load.
+ * Known Faults:         None known.
  */
 
 import { BsCheckLg, BsChevronDown } from "react-icons/bs";
@@ -22,7 +42,25 @@ interface SettingsModalProps {
 const SettingsModal: React.FC<SettingsModalProps> = ({ setSettings, settings }) => {
 	const [fontSize, setFontSize] = useLocalStorage("lcc-fontSize", "16px");
 
-	/** Toggle the font size dropdown, stopping propagation to prevent the modal from closing. */
+	/**
+	 * Artifact:             handleClickDropdown
+	 * Description:          Toggles the font size dropdown visibility while stopping event
+	 *                       propagation to prevent the modal backdrop from closing.
+	 *
+	 * Preconditions:        settings state must be initialized.
+	 * Acceptable Input:     e — React MouseEvent from the dropdown toggle button click.
+	 * Unacceptable Input:   N/A — called only by button click.
+	 *
+	 * Postconditions:       settings.dropdownIsOpen is toggled to its boolean inverse.
+	 * Return Values:        void.
+	 *
+	 * Error/Exception Conditions:
+	 *                       None.
+	 * Side Effects:         Calls e.stopPropagation() to prevent backdrop click handler.
+	 *                       Updates settings state via setSettings.
+	 * Invariants:           dropdownIsOpen is always a boolean.
+	 * Known Faults:         None known.
+	 */
 	const handleClickDropdown = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
 		e.stopPropagation();
 		setSettings({ ...settings, dropdownIsOpen: !settings.dropdownIsOpen });
@@ -108,7 +146,25 @@ interface SettingsListItemProps {
 	handleFontSizeChange: (fontSize: string) => void;
 }
 
-/** Single font size option in the settings dropdown, highlighted when it matches the active size. */
+/**
+ * Artifact:             SettingsListItem
+ * Description:          Single font size option in the settings dropdown — highlighted with
+ *                       a checkmark when it matches the currently active font size.
+ *
+ * Preconditions:        fontSize, selectedOption, and handleFontSizeChange must be provided.
+ * Acceptable Input:     fontSize — string from EDITOR_FONT_SIZES; selectedOption — current
+ *                       active font size string; handleFontSizeChange — callback function.
+ * Unacceptable Input:   null or undefined fontSize, selectedOption, or handleFontSizeChange.
+ *
+ * Postconditions:       Clicking the item calls handleFontSizeChange(fontSize).
+ * Return Values:        React JSX of a single list item with conditional checkmark.
+ *
+ * Error/Exception Conditions:
+ *                       None.
+ * Side Effects:         Calls handleFontSizeChange on click, updating localStorage and state.
+ * Invariants:           Checkmark is visible only when fontSize === selectedOption.
+ * Known Faults:         None known.
+ */
 const SettingsListItem: React.FC<SettingsListItemProps> = ({ fontSize, selectedOption, handleFontSizeChange }) => {
 	return (
 		<li className='relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:bg-dark-fill-3 rounded-lg'>

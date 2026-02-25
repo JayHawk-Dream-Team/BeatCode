@@ -1,9 +1,29 @@
 /**
- * Next.js application root that wraps every page with shared providers.
+ * Artifact:             _app.tsx
+ * Description:          Next.js application root — wraps every page with RecoilRoot for
+ *                       global state management and ToastContainer for toast notifications.
  *
- * Provides Recoil state management, global toast notifications, and shared HTML
- * head metadata (title, favicon, viewport). This is the single place providers
- * should be added — avoid wrapping individual pages separately.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        react-toastify CSS must be importable; all page components must
+ *                       be valid React components receivable as the Component prop.
+ * Acceptable Input:     Component and pageProps as supplied by the Next.js router.
+ * Unacceptable Input:   N/A — inputs are always provided by the Next.js framework.
+ *
+ * Postconditions:       Every page component renders inside RecoilRoot and has access
+ *                       to toast notification APIs via react-toastify.
+ * Return Values:        React JSX tree wrapping the active page component.
+ *
+ * Error/Exception Conditions:
+ *                       Unhandled exceptions inside Component propagate normally to the
+ *                       browser and are not caught at this level.
+ * Side Effects:         Mounts a global RecoilRoot state store and registers the
+ *                       ToastContainer in the DOM for the lifetime of the application.
+ * Invariants:           RecoilRoot and ToastContainer are always ancestors of every page.
+ * Known Faults:         None known.
  */
 
 import "@/styles/globals.css";

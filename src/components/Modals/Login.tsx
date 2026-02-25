@@ -1,9 +1,31 @@
 /**
- * Login form inside the auth modal.
+ * Artifact:             Login.tsx
+ * Description:          Email/password login form rendered inside AuthModal — authenticates
+ *                       via Firebase and redirects to the home page on success.
  *
- * Signs in with Firebase email/password auth and redirects to the home page on
- * success. Switches to the register or forgotPassword views by updating the
- * authModalState type atom.
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Date Created:         2023-03-18
+ * Revisions:
+ *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *
+ * Preconditions:        Firebase Auth must be initialized. RecoilRoot must be present.
+ * Acceptable Input:     email — valid email format string; password — non-empty string.
+ * Unacceptable Input:   Empty email or password field (caught before submission);
+ *                       wrong credentials (rejected by Firebase with error toast).
+ *
+ * Postconditions:       On success, the user is authenticated and redirected to "/".
+ * Return Values:        React JSX of the login form.
+ *
+ * Error/Exception Conditions:
+ *                       Empty fields — browser alert before submission.
+ *                       Firebase errors (wrong password, user not found) — toast error.
+ *                       Firebase hook errors — surfaced via useEffect toast.
+ * Side Effects:         Calls Firebase signInWithEmailAndPassword on form submit.
+ *                       Calls router.push("/") on successful authentication.
+ *                       Updates authModalState.type to switch between modal views.
+ * Invariants:           inputs.email and inputs.password are always controlled string values.
+ * Known Faults:         Uses browser alert() for empty-field validation, inconsistent with
+ *                       the toast-based error handling used for Firebase errors.
  */
 
 import { authModalState } from "@/atoms/authModalAtom";
@@ -27,7 +49,25 @@ const Login: React.FC<LoginProps> = () => {
 		setInputs((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 	};
 
-	/** Validate inputs and submit email/password credentials to Firebase Auth. */
+	/**
+	 * Artifact:             handleLogin
+	 * Description:          Validates form inputs and submits email/password credentials
+	 *                       to Firebase Auth, redirecting to home on success.
+	 *
+	 * Preconditions:        inputs.email and inputs.password must be non-empty strings.
+	 * Acceptable Input:     e — React form submit event; reads email/password from state.
+	 * Unacceptable Input:   Empty email or password (guarded by alert before Firebase call).
+	 *
+	 * Postconditions:       User is authenticated and router navigates to "/" on success.
+	 * Return Values:        Promise<void>.
+	 *
+	 * Error/Exception Conditions:
+	 *                       Empty fields — alert shown, function returns early.
+	 *                       Firebase auth failure — toast error shown.
+	 * Side Effects:         Calls Firebase signInWithEmailAndPassword. Calls router.push("/").
+	 * Invariants:           e.preventDefault() always called to suppress form reload.
+	 * Known Faults:         None known.
+	 */
 	const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		if (!inputs.email || !inputs.password) return alert("Please fill all fields");

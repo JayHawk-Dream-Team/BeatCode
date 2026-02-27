@@ -7,6 +7,8 @@
  * Date Created:         2023-03-18
  * Revisions:
  *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *   2026-02-27          Disabled Recoil duplicate atom key check to suppress dev-mode
+ *                       HMR warning for "authModalState" (Carlos Mbendera)
  *
  * Preconditions:        react-toastify CSS must be importable; all page components must
  *                       be valid React components receivable as the Component prop.
@@ -29,9 +31,14 @@
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import Head from "next/head";
-import { RecoilRoot } from "recoil";
+import { RecoilRoot, RecoilEnv } from "recoil";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
+// Written by Carlos with help from Claude
+// Suppress the duplicate atom key warning caused by Next.js hot module replacement
+// re-evaluating the Recoil atom module on every page recompile in development.
+RecoilEnv.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED = false;
 export default function App({ Component, pageProps }: AppProps) {
 	return (
 		<RecoilRoot>

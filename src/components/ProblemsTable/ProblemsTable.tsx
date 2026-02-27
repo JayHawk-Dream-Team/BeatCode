@@ -89,22 +89,26 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems }) => 
 								{solvedProblems.includes(problem.id) && <BsCheckCircle fontSize={"18"} width='18' />}
 							</th>
 							<td className='px-6 py-4'>
-								{problem.link ? (
-									<Link
-										href={problem.link}
-										className='hover:text-blue-600 cursor-pointer'
-										target='_blank'
-									>
-										{problem.title}
-									</Link>
-								) : (
+								{/* Written by Carlos with help from Claude */}
+								<div className='flex items-center gap-2'>
 									<Link
 										className='hover:text-blue-600 cursor-pointer'
 										href={`/problems/${problem.id}`}
 									>
 										{problem.title}
 									</Link>
-								)}
+									{problem.link && (
+										<a
+											href={problem.link}
+											target='_blank'
+											rel='noreferrer'
+											className='text-gray-500 hover:text-blue-400'
+											title='View on LeetCode'
+										>
+											↗
+										</a>
+									)}
+								</div>
 							</td>
 							<td className={`px-6 py-4 ${difficulyColor}`}>{problem.difficulty}</td>
 							<td className={"px-6 py-4"}>{problem.category}</td>

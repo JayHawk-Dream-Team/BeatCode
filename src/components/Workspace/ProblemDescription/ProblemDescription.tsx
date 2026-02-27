@@ -411,20 +411,29 @@ function useGetCurrentProblem(problemId: string) {
 
 	useEffect(() => {
 		// Get problem from DB
+		// Written by Carlos with help from Claude
 		const getCurrentProblem = async () => {
 			setLoading(true);
-			const docRef = doc(firestore, "problems", problemId);
-			const docSnap = await getDoc(docRef);
+			// Try the legacy "problems" collection first, then fall back to "questions"
+			let docSnap = await getDoc(doc(firestore, "problems", problemId));
+			if (!docSnap.exists()) {
+				docSnap = await getDoc(doc(firestore, "questions", problemId));
+			}
 			if (docSnap.exists()) {
-				const problem = docSnap.data();
+				const data = docSnap.data();
+				// Normalise difficulty to title case ("easy" → "Easy")
+				const difficulty =
+					data.difficulty
+						? data.difficulty.charAt(0).toUpperCase() + data.difficulty.slice(1).toLowerCase()
+						: "";
+				const problem = { ...data, difficulty };
 				setCurrentProblem({ id: docSnap.id, ...problem } as DBProblem);
-				// easy, medium, hard
 				setProblemDifficultyClass(
-					problem.difficulty === "Easy"
+					difficulty === "Easy"
 						? "bg-olive text-olive"
-						: problem.difficulty === "Medium"
+						: difficulty === "Medium"
 						? "bg-dark-yellow text-dark-yellow"
-						: " bg-dark-pink text-dark-pink"
+						: "bg-dark-pink text-dark-pink"
 				);
 			}
 			setLoading(false);

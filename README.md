@@ -2,10 +2,9 @@
 
 A LeetCode-style coding challenge platform built as a capstone project for EECS 582 (Spring 2026) at the University of Kansas.
 
+The remote deployment is at https://beat-code-eta.vercel.app
+
 **Built With:** React · Next.js 13 · TypeScript · TailwindCSS · Firebase
-
-![Screenshot of App](https://i.ibb.co/b3XDkdN/Full-Stack-1.png)
-
 ---
 
 ## Getting Started

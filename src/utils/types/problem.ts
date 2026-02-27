@@ -7,6 +7,8 @@
  * Date Created:         2023-03-18
  * Revisions:
  *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *   2026-02-27          Extended DBProblem with new Firestore schema fields: beatcodeId,
+ *                       leetcodeId, description, tags, youtubeLinks (Carlos Mbendera)
  *
  * Preconditions:        N/A — file contains only type definitions; no runtime behavior.
  * Acceptable Input:     N/A — compile-time types only.
@@ -56,4 +58,10 @@ export type DBProblem = {
 	order: number;
 	videoId?: string;
 	link?: string;
+	// Fields from the new Firestore schema. Shout out to Mahdi
+	beatcodeId?: string;
+	leetcodeId?: number;
+	description?: string;
+	tags?: string[];
+	youtubeLinks?: string[];
 };

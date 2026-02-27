@@ -8,10 +8,19 @@
  * Date Created:         2023-03-18
  * Revisions:
  *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *   2026-02-27          Updated useGetProblems to support both old (title, category, order)
+ *                       and new (Title, Difficulty, Tags, Leetcode link, Youtube links,
+ *                       Beatcode_id, LeetcodeId) Firestore document schemas; removed
+ *                       orderBy("order") constraint so new docs without an order field are
+ *                       returned; added extractYoutubeId helper (Carlos Mbendera)
+ *   2026-02-27          Fixed collection name from "problems" to "questions"; updated field
+ *                       mapping to match actual schema: title, difficulty (lowercase),
+ *                       tags (array of {name,slug} objects), link, yt_url, beatcode_id,
+ *                       id (LeetcodeId); normalised difficulty to title case (Carlos Mbendera)
  *
- * Preconditions:        Firebase and Firestore must be initialized. The "problems" collection
- *                       must exist with documents containing id, title, category, difficulty,
- *                       order fields. setLoadingProblems must be a valid React dispatch fn.
+ * Preconditions:        Firebase and Firestore must be initialized. The "questions" collection
+ *                       must exist with documents from the new schema. setLoadingProblems must
+ *                       be a valid React dispatch function.
  * Acceptable Input:     setLoadingProblems — React setState dispatch function (boolean).
  * Unacceptable Input:   null or undefined setLoadingProblems.
  *
@@ -34,7 +43,7 @@ import { BsCheckCircle } from "react-icons/bs";
 import { AiFillYoutube } from "react-icons/ai";
 import { IoClose } from "react-icons/io5";
 import YouTube from "react-youtube";
-import { collection, doc, getDoc, getDocs, orderBy, query } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query } from "firebase/firestore";
 import { auth, firestore } from "@/firebase/firebase";
 import { DBProblem } from "@/utils/types/problem";
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -146,9 +155,42 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems }) => 
 export default ProblemsTable;
 
 /**
+ * Artifact:             extractYoutubeId
+ * Description:          Extracts the 11-character YouTube video ID from a full YouTube URL
+ *                       or returns the string as-is when it is already a bare video ID.
+ *
+ * Preconditions:        url must be a non-empty string.
+ * Acceptable Input:     Full YouTube URLs (youtube.com/watch?v=..., youtu.be/...) or
+ *                       bare 11-character video IDs.
+ * Unacceptable Input:   Empty string; non-YouTube URLs (returned unchanged).
+ *
+ * Postconditions:       Returns the video ID string.
+ * Return Values:        string — the extracted or original video ID.
+ *
+ * Error/Exception Conditions:
+ *                       None; falls back to returning the original string on parse failure.
+ * Side Effects:         None — pure function.
+ * Invariants:           Return value is always a non-empty string when input is non-empty.
+ * Known Faults:         Does not validate that the returned ID is a real YouTube video.
+ */
+// Written by Carlos with help from Claude
+function extractYoutubeId(url: string): string {
+	try {
+		const parsed = new URL(url);
+		if (parsed.hostname === "youtu.be") return parsed.pathname.slice(1);
+		const v = parsed.searchParams.get("v");
+		if (v) return v;
+	} catch {
+		// url is not a valid URL — treat it as a bare video ID
+	}
+	return url;
+}
+
+/**
  * Artifact:             useGetProblems
- * Description:          Custom hook — fetches all problems from Firestore ordered by the
- *                       "order" field and signals loading state to the parent component.
+ * Description:          Custom hook — fetches all problems from Firestore, normalises both
+ *                       old and new document schemas into DBProblem objects, sorts by order
+ *                       (falling back to LeetcodeId / Beatcode_id), and signals loading state.
  *
  * Preconditions:        Firestore must be initialized; "problems" collection must exist.
  * Acceptable Input:     setLoadingProblems — React dispatch for a boolean loading flag.
@@ -168,17 +210,52 @@ function useGetProblems(setLoadingProblems: React.Dispatch<React.SetStateAction<
 	const [problems, setProblems] = useState<DBProblem[]>([]);
 
 	useEffect(() => {
+		// Written by Carlos with help from Claude
 		const getProblems = async () => {
-			// fetching data logic
 			setLoadingProblems(true);
-			const q = query(collection(firestore, "problems"), orderBy("order", "asc"));
-			const querySnapshot = await getDocs(q);
-			const tmp: DBProblem[] = [];
-			querySnapshot.forEach((doc) => {
-				tmp.push({ id: doc.id, ...doc.data() } as DBProblem);
-			});
-			setProblems(tmp);
-			setLoadingProblems(false);
+			try {
+				const q = query(collection(firestore, "questions"));
+				const querySnapshot = await getDocs(q);
+				const tmp: DBProblem[] = [];
+				querySnapshot.forEach((docSnap) => {
+					const data = docSnap.data();
+
+					// tags is an array of {name, slug, __typename} objects
+					const tagNames: string[] = Array.isArray(data.tags)
+						? data.tags.map((t: { name: string }) => t.name).filter(Boolean)
+						: [];
+
+					// Normalise difficulty to title case ("easy" → "Easy")
+					const rawDifficulty: string = data.difficulty || "";
+					const difficulty =
+						rawDifficulty.charAt(0).toUpperCase() + rawDifficulty.slice(1).toLowerCase();
+
+					const videoId = data.yt_url ? extractYoutubeId(data.yt_url) : undefined;
+
+					tmp.push({
+						id: docSnap.id,
+						title: data.title || "",
+						category: tagNames.join(", "),
+						difficulty,
+						likes: data.likes || 0,
+						dislikes: data.dislikes || 0,
+						order: data.beatcode_id || data.id || 0,
+						videoId,
+						link: data.link,
+						beatcodeId: String(data.beatcode_id ?? ""),
+						leetcodeId: data.id,
+						description: data.description,
+						tags: tagNames,
+					} as DBProblem);
+				});
+				// Sort by beatcode_id ascending
+				tmp.sort((a, b) => (a.order || 0) - (b.order || 0));
+				setProblems(tmp);
+			} catch (error) {
+				console.error("Failed to fetch problems from Firestore:", error);
+			} finally {
+				setLoadingProblems(false);
+			}
 		};
 
 		getProblems();

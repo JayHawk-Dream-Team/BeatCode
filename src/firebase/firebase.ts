@@ -7,6 +7,7 @@
  * Date Created:         2023-03-18
  * Revisions:
  *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *   2026-02-27          Fixed getApps.length → getApps().length (Carlos Mbendera)
  *
  * Preconditions:        All NEXT_PUBLIC_FIREBASE_* environment variables must be defined
  *                       in .env.local before the development server or build is started.
@@ -25,10 +26,7 @@
  * Side Effects:         Registers the Firebase app in the global Firebase app registry;
  *                       subsequent calls to getApp() elsewhere return this same instance.
  * Invariants:           Exactly one Firebase app instance exists at runtime.
- * Known Faults:         Guard condition uses `!getApps.length` (missing parentheses on
- *                       getApps call) instead of `!getApps().length`, so the guard is
- *                       always falsy and the fallback getApp() path is always taken.
- *                       Works in practice because Next.js initializes Firebase separately.
+ * Known Faults:         None known.
  */
 
 import { initializeApp, getApp, getApps } from "firebase/app";
@@ -44,7 +42,8 @@ const firebaseConfig = {
 	appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = !getApps.length ? initializeApp(firebaseConfig) : getApp();
+// Written by Carlos with help from Claude
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 const auth = getAuth(app);
 const firestore = getFirestore(app);

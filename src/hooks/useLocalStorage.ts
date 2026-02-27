@@ -9,7 +9,7 @@
  *   2026-02-24          Added prologue comments (Carlos Mbendera)
  *
  * Preconditions:        Must be called inside a React function component or custom hook.
- * Acceptable Input:     key — non-empty string localStorage key (e.g. "lcc-fontSize");
+ * Acceptable Input:     key — non-empty string localStorage key (e.g. "beatcode-fontSize");
  *                       initialValue — string fallback used when key is absent or unavailable.
  * Unacceptable Input:   null or undefined key; non-string initialValue (type is constrained).
  *

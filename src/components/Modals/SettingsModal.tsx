@@ -16,7 +16,7 @@
  *                       the EDITOR_FONT_SIZES list.
  *
  * Postconditions:       Selected font size is applied to CodeMirror via shared ISettings
- *                       and persisted to localStorage under key "lcc-fontSize".
+ *                       and persisted to localStorage under key "beatcode-fontSize".
  * Return Values:        React JSX of the settings modal dialog.
  *
  * Error/Exception Conditions:
@@ -40,7 +40,7 @@ interface SettingsModalProps {
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ setSettings, settings }) => {
-	const [fontSize, setFontSize] = useLocalStorage("lcc-fontSize", "16px");
+	const [fontSize, setFontSize] = useLocalStorage("beatcode-fontSize", "16px");
 
 	/**
 	 * Artifact:             handleClickDropdown

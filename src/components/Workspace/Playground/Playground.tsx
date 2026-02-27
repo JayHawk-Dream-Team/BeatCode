@@ -65,7 +65,7 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved 
 	const [activeTestCaseId, setActiveTestCaseId] = useState<number>(0);
 	let [userCode, setUserCode] = useState<string>(problem.starterCode);
 
-	const [fontSize, setFontSize] = useLocalStorage("lcc-fontSize", "16px");
+	const [fontSize, setFontSize] = useLocalStorage("beatcode-fontSize", "16px");
 
 	const [settings, setSettings] = useState<ISettings>({
 		fontSize: fontSize,

@@ -368,13 +368,15 @@ const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solve
 							))}
 						</div>
 
+						 
 						{/* Constraints */}
-						<div className='my-8 pb-4'>
+						{/* <div className='my-8 pb-4'>
 							<div className='text-white text-sm font-medium'>Constraints:</div>
 							<ul className='text-white ml-5 list-disc '>
 								<div dangerouslySetInnerHTML={{ __html: problem.constraints }} />
 							</ul>
-						</div>
+						</div> */}
+						<div className='pb-2'></div>
 					</div>
 				</div>
 			</div>

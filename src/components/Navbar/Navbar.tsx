@@ -38,8 +38,9 @@ const Navbar: React.FC<NavbarProps> = () => {
 	};
 	return (
 		<div className='flex items-center justify-between sm:px-12 px-2 md:px-24'>
-			<Link href='/' className='flex items-center justify-center h-20'>
-				<Image src='/logo.png' alt='BeatCode' height={200} width={200} />
+			<Link href='/' className='flex items-center gap-3 h-20'>
+				<Image src='/jayhawk-logo.svg' alt='BeatCode' height={64} width={64} />
+				<span className='text-white font-bold text-2xl tracking-wide'>BeatCode</span>
 			</Link>
 			<div className='flex items-center'>
 				<button

@@ -41,12 +41,13 @@ export default function Home() {
 		<>
 			<main className='bg-dark-layer-2 min-h-screen'>
 				<Topbar />
-				<h1
-					className='text-2xl text-center text-gray-700 dark:text-gray-400 font-medium
-					uppercase mt-10 mb-5'
-				>
-					&ldquo; QUALITY OVER QUANTITY &rdquo; 👇
+				{/* Written by Carlos with help from Claude */}
+				<h1 className='text-2xl text-center text-gray-700 dark:text-gray-400 font-medium uppercase mt-10 mb-2'>
+					Rock Chalk, Code Up
 				</h1>
+				<p className='text-center text-gray-500 dark:text-gray-500 text-sm mb-5'>
+					University of Kansas &middot; EECS 582 &middot; BeatCode
+				</p>
 				<div className='relative overflow-x-auto mx-auto px-6 pb-10'>
 					{loadingProblems && (
 						<div className='max-w-[1200px] mx-auto sm:w-7/12 w-full animate-pulse'>

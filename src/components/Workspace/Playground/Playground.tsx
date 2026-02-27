@@ -112,7 +112,21 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved 
 		try {
 			userCode = userCode.slice(userCode.indexOf(problem.starterFunctionName));
 			const cb = new Function(`return ${userCode}`)();
-			const handler = problems[pid as string].handlerFunction;
+
+			// Written by Carlos with help from Claude
+			// Local problems have a real handlerFunction in the problems map.
+			// Firestore-sourced problems do not — show an info toast instead of crashing.
+			const localProblem = problems[pid as string];
+			if (!localProblem) {
+				toast.info("No automated test cases for this problem yet. Check your solution manually.", {
+					position: "top-center",
+					autoClose: 4000,
+					theme: "dark",
+				});
+				return;
+			}
+
+			const handler = localProblem.handlerFunction;
 
 			if (typeof handler === "function") {
 				const success = handler(cb);

@@ -91,11 +91,26 @@ export async function getStaticProps({ params }: { params: { pid: string } }) {
 
 		const data = docSnap.data();
 
-		// Convert the plain-text description to basic HTML for dangerouslySetInnerHTML
-		const problemStatement = (data.description || "")
-			.split("\n\n")
-			.map((para: string) => `<p class="mt-3">${para.replace(/\n/g, "<br />")}</p>`)
-			.join("");
+		// Written by Carlos with help from Claude
+		// Convert the plain-text description to HTML for dangerouslySetInnerHTML.
+		// Handles [url] bracketed image/link references from the Firestore description format.
+		const IMAGE_EXTS = /\.(png|jpg|jpeg|gif|svg|webp)(\?.*)?$/i;
+		const convertDescription = (text: string): string =>
+			text
+				.split("\n\n")
+				.map((para) => {
+					const inner = para
+						.replace(/\n/g, "<br />")
+						// [url] → <img> for image URLs, <a> for other links
+						.replace(/\[((https?:\/\/)[^\]]+)\]/g, (_match, url) =>
+							IMAGE_EXTS.test(url)
+								? `<img src="${url}" alt="" class="mt-3 max-w-full rounded" />`
+								: `<a href="${url}" target="_blank" rel="noreferrer" class="text-blue-400 hover:underline">${url}</a>`
+						);
+					return `<p class="mt-3">${inner}</p>`;
+				})
+				.join("");
+		const problemStatement = convertDescription(data.description || "");
 
 		const problem: Problem = {
 			id: pid,
@@ -104,7 +119,7 @@ export async function getStaticProps({ params }: { params: { pid: string } }) {
 			examples: [],
 			constraints: "",
 			order: data.beatcode_id || data.id || 0,
-			starterCode: "/**\n * Write your solution below\n */\nfunction solution() {\n\t\n}",
+			starterCode: "/**\n * Write your code below\n */\nfunction solution() {\n\t\n}",
 			handlerFunction: "function(fn) { return false; }",
 			starterFunctionName: "solution",
 		};

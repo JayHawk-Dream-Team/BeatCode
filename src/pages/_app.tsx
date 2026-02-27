@@ -45,7 +45,7 @@ export default function App({ Component, pageProps }: AppProps) {
 			<Head>
 				<title>BeatCode</title>
 				<meta name='viewport' content='width=device-width, initial-scale=1' />
-				<link rel='icon' href='/favicon.png' />
+				<link rel='icon' type='image/svg+xml' href='/jayhawk-logo.svg' />
 				<meta
 					name='description'
 					content='BeatCode — a coding challenge platform with problems and video solutions'

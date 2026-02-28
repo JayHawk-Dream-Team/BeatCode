@@ -33,18 +33,19 @@
  *                       malicious code could access window, document, or other browser APIs.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import PreferenceNav from "./PreferenceNav/PreferenceNav";
 import Split from "react-split";
 import CodeMirror from "@uiw/react-codemirror";
 import { vscodeDark } from "@uiw/codemirror-theme-vscode";
 import { javascript } from "@codemirror/lang-javascript";
+import { python } from "@codemirror/lang-python";
+import { cpp } from "@codemirror/lang-cpp";
 import EditorFooter from "./EditorFooter";
 import { Problem } from "@/utils/types/problem";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, firestore } from "@/firebase/firebase";
 import { toast } from "react-toastify";
-import { problems } from "@/utils/problems";
 import { useRouter } from "next/router";
 import { arrayUnion, doc, updateDoc } from "firebase/firestore";
 import useLocalStorage from "@/hooks/useLocalStorage";
@@ -61,9 +62,18 @@ export interface ISettings {
 	dropdownIsOpen: boolean;
 }
 
+export type JudgeLanguage = "javascript" | "python" | "cpp";
+export type JudgeStatus = "unknown" | "ok" | "down";
+
 const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved }) => {
 	const [activeTestCaseId, setActiveTestCaseId] = useState<number>(0);
-	let [userCode, setUserCode] = useState<string>(problem.starterCode);
+	const [userCode, setUserCode] = useState<string>(problem.starterCode);
+	const [storedLanguage, setStoredLanguage] = useLocalStorage("beatcode-language", "javascript");
+	const language = (storedLanguage as JudgeLanguage) || "javascript";
+	const [running, setRunning] = useState(false);
+	const [submitting, setSubmitting] = useState(false);
+	const [judgeStatus, setJudgeStatus] = useState<JudgeStatus>("unknown");
+	const [checkingJudge, setCheckingJudge] = useState(false);
 
 	const [fontSize, setFontSize] = useLocalStorage("beatcode-fontSize", "16px");
 
@@ -77,6 +87,48 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved 
 	const {
 		query: { pid },
 	} = useRouter();
+
+	const getDefaultStarterCode = useCallback(
+		(lang: JudgeLanguage) => {
+			if (lang === "javascript") return problem.starterCode;
+			const functionName = (problem.starterFunctionName || "solution")
+				.replace(/^function\s+/, "")
+				.replace(/\(.*/, "")
+				.trim();
+			if (lang === "python") {
+				return `def ${functionName}():
+    # Write your solution here
+    pass
+
+if __name__ == "__main__":
+    print(${functionName}())`;
+			}
+			return `#include <bits/stdc++.h>
+using namespace std;
+
+auto ${functionName}() {
+    // Write your solution here
+}
+
+int main() {
+    cout << ${functionName}() << "\\n";
+    return 0;
+}`;
+		},
+		[problem.starterCode, problem.starterFunctionName]
+	);
+
+	const editorExtensions = useMemo(() => {
+		if (language === "python") return [python()];
+		if (language === "cpp") return [cpp()];
+		return [javascript()];
+	}, [language]);
+
+	const codeStorageKey = `code-${pid}-${language}`;
+	const testCases = problem.examples.map((example) => ({
+		input: example.inputText || "",
+		expectedOutput: example.outputText || "",
+	}));
 
 	/**
 	 * Artifact:             handleSubmit
@@ -100,6 +152,40 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved 
 	 * Invariants:           userCode is sliced from starterFunctionName forward before eval.
 	 * Known Faults:         No sandbox around new Function(); user code runs with full access.
 	 */
+	const handleRun = async () => {
+		setRunning(true);
+		try {
+			const response = await fetch("/api/judge/run", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					language,
+					code: userCode,
+					stdin: testCases[activeTestCaseId]?.input || "",
+				}),
+			});
+			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error(data.error || "Run request failed");
+			}
+
+			if (data.exitCode === 0) {
+				toast.success("Code ran successfully", { position: "top-center", autoClose: 2500, theme: "dark" });
+			} else {
+				toast.error(data.stderr || "Runtime or compile error", {
+					position: "top-center",
+					autoClose: 3500,
+					theme: "dark",
+				});
+			}
+		} catch (error: any) {
+			toast.error(error.message || "Unable to run code", { position: "top-center", autoClose: 3000, theme: "dark" });
+		} finally {
+			setRunning(false);
+		}
+	};
+
 	const handleSubmit = async () => {
 		if (!user) {
 			toast.error("Please login to submit your code", {
@@ -109,73 +195,99 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved 
 			});
 			return;
 		}
+		if (testCases.length === 0) {
+			toast.error("No test cases configured for this problem yet.", {
+				position: "top-center",
+				autoClose: 3000,
+				theme: "dark",
+			});
+			return;
+		}
+		setSubmitting(true);
 		try {
-			userCode = userCode.slice(userCode.indexOf(problem.starterFunctionName));
-			const cb = new Function(`return ${userCode}`)();
+			const response = await fetch("/api/judge/submit", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					language,
+					code: userCode,
+					testCases,
+				}),
+			});
+			const data = await response.json();
 
-			// Written by Carlos with help from Claude
-			// Local problems have a real handlerFunction in the problems map.
-			// Firestore-sourced problems do not — show an info toast instead of crashing.
-			const localProblem = problems[pid as string];
-			if (!localProblem) {
-				toast.info("No automated test cases for this problem yet. Check your solution manually.", {
-					position: "top-center",
-					autoClose: 4000,
-					theme: "dark",
-				});
-				return;
+			if (!response.ok) {
+				throw new Error(data.error || "Submit request failed");
 			}
 
-			const handler = localProblem.handlerFunction;
-
-			if (typeof handler === "function") {
-				const success = handler(cb);
-				if (success) {
-					toast.success("Congrats! All tests passed!", {
-						position: "top-center",
-						autoClose: 3000,
-						theme: "dark",
-					});
-					setSuccess(true);
-					setTimeout(() => {
-						setSuccess(false);
-					}, 4000);
-
-					const userRef = doc(firestore, "users", user.uid);
-					await updateDoc(userRef, {
-						solvedProblems: arrayUnion(pid),
-					});
-					setSolved(true);
-				}
-			}
-		} catch (error: any) {
-			console.log(error.message);
-			if (
-				error.message.startsWith("AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:")
-			) {
-				toast.error("Oops! One or more test cases failed", {
+			if (data.passed) {
+				toast.success("Congrats! All tests passed!", {
 					position: "top-center",
 					autoClose: 3000,
+					theme: "dark",
+				});
+				setSuccess(true);
+				setTimeout(() => {
+					setSuccess(false);
+				}, 4000);
+
+				const userRef = doc(firestore, "users", user.uid);
+				await updateDoc(userRef, {
+					solvedProblems: arrayUnion(pid),
+				});
+				setSolved(true);
+			} else if (data.reason === "wrong_answer") {
+				toast.error(`Wrong answer on case ${Number(data.failedAt) + 1}`, {
+					position: "top-center",
+					autoClose: 3500,
 					theme: "dark",
 				});
 			} else {
-				toast.error(error.message, {
+				toast.error("Runtime or compile error", {
 					position: "top-center",
-					autoClose: 3000,
+					autoClose: 3500,
 					theme: "dark",
 				});
 			}
+		} catch (error: any) {
+			toast.error(error.message || "Unable to submit code", {
+				position: "top-center",
+				autoClose: 3000,
+				theme: "dark",
+			});
+		} finally {
+			setSubmitting(false);
+		}
+	};
+
+	const checkJudgeHealth = async () => {
+		setCheckingJudge(true);
+		try {
+			const response = await fetch("/api/judge/health");
+			const data = await response.json();
+			if (!response.ok || !data?.ok) {
+				setJudgeStatus("down");
+				toast.error("Judge is unreachable", { position: "top-center", autoClose: 2200, theme: "dark" });
+				return;
+			}
+			setJudgeStatus("ok");
+			toast.success("Judge is online", { position: "top-center", autoClose: 1800, theme: "dark" });
+		} catch {
+			setJudgeStatus("down");
+			toast.error("Judge is unreachable", { position: "top-center", autoClose: 2200, theme: "dark" });
+		} finally {
+			setCheckingJudge(false);
 		}
 	};
 
 	useEffect(() => {
-		const code = localStorage.getItem(`code-${pid}`);
+		const code = localStorage.getItem(codeStorageKey);
 		if (user) {
-			setUserCode(code ? JSON.parse(code) : problem.starterCode);
+			setUserCode(code ? JSON.parse(code) : getDefaultStarterCode(language));
 		} else {
-			setUserCode(problem.starterCode);
+			setUserCode(getDefaultStarterCode(language));
 		}
-	}, [pid, user, problem.starterCode]);
+	}, [codeStorageKey, user, language, getDefaultStarterCode]);
 
 	/**
 	 * Artifact:             onChange
@@ -197,12 +309,20 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved 
 	 */
 	const onChange = (value: string) => {
 		setUserCode(value);
-		localStorage.setItem(`code-${pid}`, JSON.stringify(value));
+		localStorage.setItem(codeStorageKey, JSON.stringify(value));
 	};
 
 	return (
 		<div className='flex flex-col bg-dark-layer-1 relative overflow-x-hidden'>
-			<PreferenceNav settings={settings} setSettings={setSettings} />
+			<PreferenceNav
+				settings={settings}
+				setSettings={setSettings}
+				language={language}
+				setLanguage={(next) => setStoredLanguage(next)}
+				judgeStatus={judgeStatus}
+				checkingJudge={checkingJudge}
+				onCheckJudge={checkJudgeHealth}
+			/>
 
 			<Split className='h-[calc(100vh-94px)]' direction='vertical' sizes={[60, 40]} minSize={60}>
 				<div className='w-full overflow-auto'>
@@ -210,7 +330,7 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved 
 						value={userCode}
 						theme={vscodeDark}
 						onChange={onChange}
-						extensions={[javascript()]}
+						extensions={editorExtensions}
 						style={{ fontSize: settings.fontSize }}
 					/>
 				</div>
@@ -261,8 +381,14 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved 
 					)}
 				</div>
 			</Split>
-			<EditorFooter handleSubmit={handleSubmit} />
+			<EditorFooter
+				handleRun={handleRun}
+				handleSubmit={handleSubmit}
+				running={running}
+				submitting={submitting}
+			/>
 		</div>
 	);
 };
 export default Playground;
+

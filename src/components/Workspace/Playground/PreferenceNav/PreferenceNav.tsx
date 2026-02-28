@@ -31,15 +31,28 @@
 
 import { useState, useEffect } from "react";
 import { AiOutlineFullscreen, AiOutlineFullscreenExit, AiOutlineSetting } from "react-icons/ai";
-import { ISettings } from "../Playground";
+import { ISettings, JudgeLanguage, JudgeStatus } from "../Playground";
 import SettingsModal from "@/components/Modals/SettingsModal";
 
 type PreferenceNavProps = {
 	settings: ISettings;
 	setSettings: React.Dispatch<React.SetStateAction<ISettings>>;
+	language: JudgeLanguage;
+	setLanguage: (language: JudgeLanguage) => void;
+	judgeStatus: JudgeStatus;
+	checkingJudge: boolean;
+	onCheckJudge: () => void;
 };
 
-const PreferenceNav: React.FC<PreferenceNavProps> = ({ setSettings, settings }) => {
+const PreferenceNav: React.FC<PreferenceNavProps> = ({
+	setSettings,
+	settings,
+	language,
+	setLanguage,
+	judgeStatus,
+	checkingJudge,
+	onCheckJudge,
+}) => {
 	const [isFullScreen, setIsFullScreen] = useState(false);
 
 	/**
@@ -91,14 +104,39 @@ const PreferenceNav: React.FC<PreferenceNavProps> = ({ setSettings, settings }) 
 	return (
 		<div className='flex items-center justify-between bg-dark-layer-2 h-11 w-full '>
 			<div className='flex items-center text-white'>
-				<button className='flex cursor-pointer items-center rounded focus:outline-none bg-dark-fill-3 text-dark-label-2 hover:bg-dark-fill-2  px-2 py-1.5 font-medium'>
-					<div className='flex items-center px-1'>
-						<div className='text-xs text-label-2 dark:text-dark-label-2'>JavaScript</div>
-					</div>
-				</button>
+				<div className='flex cursor-pointer items-center rounded focus:outline-none bg-dark-fill-3 text-dark-label-2 hover:bg-dark-fill-2 px-2 py-1.5 font-medium'>
+					<select
+						className='text-xs bg-transparent outline-none text-label-2 dark:text-dark-label-2 cursor-pointer'
+						value={language}
+						onChange={(e) => setLanguage(e.target.value as JudgeLanguage)}
+					>
+						<option value='javascript' className='bg-dark-layer-1 text-white'>
+							JavaScript
+						</option>
+						<option value='python' className='bg-dark-layer-1 text-white'>
+							Python
+						</option>
+						<option value='cpp' className='bg-dark-layer-1 text-white'>
+							C++
+						</option>
+					</select>
+				</div>
 			</div>
 
 			<div className='flex items-center m-2'>
+				<button
+					className={`px-2 py-1 text-xs rounded mr-2 ${
+						judgeStatus === "ok"
+							? "bg-dark-green-s text-white"
+							: judgeStatus === "down"
+							? "bg-dark-pink text-white"
+							: "bg-dark-fill-3 text-dark-label-2"
+					}`}
+					onClick={onCheckJudge}
+					disabled={checkingJudge}
+				>
+					{checkingJudge ? "Checking..." : judgeStatus === "ok" ? "Judge: Online" : "Judge: Check"}
+				</button>
 				<button
 					className='preferenceBtn group'
 					onClick={() => setSettings({ ...settings, settingsModalIsOpen: true })}

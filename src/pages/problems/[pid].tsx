@@ -46,15 +46,19 @@ type ProblemPageProps = {
 	problem: Problem;
 };
 
+import { useRouter } from "next/router";
+
 const ProblemPage: React.FC<ProblemPageProps> = ({ problem }) => {
 	const hasMounted = useHasMounted();
+	const router = useRouter();
+	const { matchId } = router.query;
 
 	if (!hasMounted) return null;
 
 	return (
 		<div>
 			<Topbar problemPage />
-			<Workspace problem={problem} />
+			<Workspace problem={problem} matchId={typeof matchId === "string" ? matchId : undefined} />
 		</div>
 	);
 };

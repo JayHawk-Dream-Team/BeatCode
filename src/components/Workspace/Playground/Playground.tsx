@@ -54,6 +54,7 @@ type PlaygroundProps = {
 	problem: Problem;
 	setSuccess: React.Dispatch<React.SetStateAction<boolean>>;
 	setSolved: React.Dispatch<React.SetStateAction<boolean>>;
+	matchId?: string;
 };
 
 export interface ISettings {
@@ -65,7 +66,7 @@ export interface ISettings {
 export type JudgeLanguage = "javascript" | "python" | "cpp";
 export type JudgeStatus = "unknown" | "ok" | "down";
 
-const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved }) => {
+const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved, matchId }) => {
 	const [activeTestCaseId, setActiveTestCaseId] = useState<number>(0);
 	const [userCode, setUserCode] = useState<string>(problem.starterCode);
 	const [storedLanguage, setStoredLanguage] = useLocalStorage("beatcode-language", "javascript");
@@ -236,6 +237,19 @@ int main() {
 					solvedProblems: arrayUnion(pid),
 				});
 				setSolved(true);
+
+				// If this submission is for a match, notify the match document (record submission / win)
+				if (matchId) {
+					try {
+						await fetch(`/api/matches/${matchId}/submit`, {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ userId: user.uid, result: "win", details: data }),
+						});
+					} catch (err) {
+						console.error("Failed to notify match submit", err);
+					}
+				}
 			} else if (data.reason === "wrong_answer") {
 				toast.error(`Wrong answer on case ${Number(data.failedAt) + 1}`, {
 					position: "top-center",

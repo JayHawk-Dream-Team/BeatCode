@@ -45,6 +45,8 @@ import { IoClose } from "react-icons/io5";
 import YouTube from "react-youtube";
 import { collection, doc, getDoc, getDocs, query } from "firebase/firestore";
 import { auth, firestore } from "@/firebase/firebase";
+import { useRouter } from "next/router";
+import { toast } from "react-toastify";
 import { DBProblem } from "@/utils/types/problem";
 import { useAuthState } from "react-firebase-hooks/auth";
 
@@ -59,9 +61,52 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems }) => 
 	});
 	const problems = useGetProblems(setLoadingProblems);
 	const solvedProblems = useGetSolvedProblems();
+	const [user] = useAuthState(auth);
+	const router = useRouter();
+	const [joiningId, setJoiningId] = useState<string | null>(null);
 	console.log("solvedProblems", solvedProblems);
 	const closeModal = () => {
 		setYoutubePlayer({ isOpen: false, videoId: "" });
+	};
+
+	const handleJoin = async (problemId: string) => {
+		if (!user) {
+			toast.error("Please sign in to join multiplayer", { position: "top-center", theme: "dark" });
+			router.push("/auth");
+			return;
+		}
+		try {
+			setJoiningId(problemId);
+			const res = await fetch("/api/matchmaking/join", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ userId: user.uid, displayName: user.email, problemId }),
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error || "Failed to join queue");
+			if (data.queued) {
+				toast.info("Queued for match — waiting for an opponent", { position: "top-center", theme: "dark" });
+			} else {
+				router.push(`/problems/${problemId}?matchId=${data.matchId}`);
+			}
+		} catch (err: any) {
+			toast.error(err.message || "Unable to join matchmaking", { position: "top-center", theme: "dark" });
+		} finally {
+			setJoiningId(null);
+		}
+	};
+
+	const handleCancel = async (queueId?: string) => {
+		try {
+			await fetch("/api/matchmaking/cancel", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ userId: user?.uid || null, queueId: queueId || null }),
+			});
+			toast.info("Cancelled matchmaking", { position: "top-center", theme: "dark" });
+		} catch (err) {
+			toast.error("Failed to cancel matchmaking", { position: "top-center", theme: "dark" });
+		}
 	};
 
 	useEffect(() => {
@@ -112,10 +157,10 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems }) => 
 							</td>
 							<td className={`px-6 py-4 ${difficulyColor}`}>{problem.difficulty}</td>
 							<td className={"px-6 py-4"}>{problem.category}</td>
-							<td className={"px-6 py-4"}>
+							<td className={'px-6 py-4'}>
 								{problem.videoId ? (
 									<AiFillYoutube
-										fontSize={"28"}
+										fontSize={'28'}
 										className='cursor-pointer hover:text-red-600'
 										onClick={() =>
 											setYoutubePlayer({ isOpen: true, videoId: problem.videoId as string })
@@ -124,6 +169,17 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems }) => 
 								) : (
 									<p className='text-gray-400'>Coming soon</p>
 								)}
+
+								{/* Multiplayer button */}
+								<div className='mt-2'>
+									<button
+										className='bg-dark-fill-3 py-1 px-3 rounded hover:bg-dark-fill-2'
+										onClick={() => handleJoin(problem.id)}
+										disabled={joiningId === problem.id}
+									>
+										{joiningId === problem.id ? 'Joining...' : 'Multiplayer'}
+									</button>
+								</div>
 							</td>
 						</tr>
 					);

@@ -52,6 +52,7 @@ const Topbar: React.FC<TopbarProps> = ({ problemPage }) => {
 	const [user] = useAuthState(auth);
 	const setAuthModalState = useSetRecoilState(authModalState);
 	const router = useRouter();
+	const { matchId } = router.query;
 
 	/**
 	 * Artifact:             handleProblemChange
@@ -127,6 +128,9 @@ const Topbar: React.FC<TopbarProps> = ({ problemPage }) => {
 				)}
 
 				<div className='flex items-center space-x-4 flex-1 justify-end'>
+					{problemPage && matchId && (
+						<div className='bg-red-600 text-white px-3 py-1 rounded text-sm mr-2'>In Match</div>
+					)}
 					<div>
 						<a
 							href='https://www.buymeacoffee.com/burakorkmezz'

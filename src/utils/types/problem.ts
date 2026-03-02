@@ -9,6 +9,7 @@
  *   2026-02-24          Added prologue comments (Carlos Mbendera)
  *   2026-02-27          Extended DBProblem with new Firestore schema fields: beatcodeId,
  *                       leetcodeId, description, tags, youtubeLinks (Carlos Mbendera)
+ *   2026-03-01          Added judge metadata for function-based invocation (Carlos Mbendera)
  *
  * Preconditions:        N/A — file contains only type definitions; no runtime behavior.
  * Acceptable Input:     N/A — compile-time types only.
@@ -27,6 +28,8 @@
  *                       safety for the user-submitted function argument.
  */
 
+import { JudgeFunctionMetadata } from "./judge";
+
 export type Example = {
 	id: number;
 	inputText: string;
@@ -43,9 +46,16 @@ export type Problem = {
 	examples: Example[];
 	constraints: string;
 	order: number;
+	/** JavaScript starter code (always required) */
 	starterCode: string;
+	/** Python starter code — if omitted, a generic stub is shown */
+	pythonStarterCode?: string;
+	/** C++ starter code — if omitted, a generic stub is shown */
+	cppStarterCode?: string;
 	handlerFunction: ((fn: any) => boolean) | string;
 	starterFunctionName: string;
+	/** Judge server function metadata for code submission and validation */
+	judgeMetadata?: JudgeFunctionMetadata;
 };
 
 export type DBProblem = {

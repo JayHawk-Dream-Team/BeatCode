@@ -92,31 +92,19 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	const getDefaultStarterCode = useCallback(
 		(lang: JudgeLanguage) => {
 			if (lang === "javascript") return problem.starterCode;
+			if (lang === "python" && problem.pythonStarterCode) return problem.pythonStarterCode;
+			if (lang === "cpp" && problem.cppStarterCode) return problem.cppStarterCode;
+			// Generic fallback when per-language starter code is not defined
 			const functionName = (problem.starterFunctionName || "solution")
 				.replace(/^function\s+/, "")
 				.replace(/\(.*/, "")
 				.trim();
 			if (lang === "python") {
-				return `def ${functionName}():
-    # Write your solution here
-    pass
-
-if __name__ == "__main__":
-    print(${functionName}())`;
+				return `def ${functionName}():\n    # Write your solution here\n    pass`;
 			}
-			return `#include <bits/stdc++.h>
-using namespace std;
-
-auto ${functionName}() {
-    // Write your solution here
-}
-
-int main() {
-    cout << ${functionName}() << "\\n";
-    return 0;
-}`;
+			return `#include <bits/stdc++.h>\nusing namespace std;\n\nauto ${functionName}() {\n    // Write your solution here\n}`;
 		},
-		[problem.starterCode, problem.starterFunctionName]
+		[problem.starterCode, problem.starterFunctionName, problem.pythonStarterCode, problem.cppStarterCode]
 	);
 
 	const editorExtensions = useMemo(() => {
@@ -156,14 +144,20 @@ int main() {
 	const handleRun = async () => {
 		setRunning(true);
 		try {
+			const body: Record<string, any> = { language, code: userCode };
+
+			if (problem.judgeMetadata) {
+				// Function-based: pass the full metadata; server invokes the function directly
+				body.metadata = problem.judgeMetadata;
+			} else {
+				// Legacy stdin/stdout fallback
+				body.stdin = testCases[activeTestCaseId]?.input || "";
+			}
+
 			const response = await fetch("/api/judge/run", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					language,
-					code: userCode,
-					stdin: testCases[activeTestCaseId]?.input || "",
-				}),
+				body: JSON.stringify(body),
 			});
 			const data = await response.json();
 
@@ -171,14 +165,38 @@ int main() {
 				throw new Error(data.error || "Run request failed");
 			}
 
-			if (data.exitCode === 0) {
-				toast.success("Code ran successfully", { position: "top-center", autoClose: 2500, theme: "dark" });
+			// Function-based response: data.status is set
+			if (data.status) {
+				if (data.status === "accepted") {
+					const passed = (data.testResults ?? []).filter((r: any) => r.passed).length;
+					const total = (data.testResults ?? []).length;
+					toast.success(`All ${total} test case${total !== 1 ? "s" : ""} passed! ✓`, { position: "top-center", autoClose: 2500, theme: "dark" });
+				} else {
+					const failedTest = (data.testResults ?? []).find((r: any) => !r.passed);
+					const passed = (data.testResults ?? []).filter((r: any) => r.passed).length;
+					const total = (data.testResults ?? []).length;
+					const detail = failedTest?.error
+						? failedTest.error
+						: failedTest
+						? `Expected ${JSON.stringify(failedTest.expected)}, got ${JSON.stringify(failedTest.actual)}`
+						: data.message || data.status;
+					toast.error(`${passed}/${total} passed — Test ${(failedTest?.testIndex ?? 0) + 1}: ${detail}`, {
+						position: "top-center",
+						autoClose: 4000,
+						theme: "dark",
+					});
+				}
 			} else {
-				toast.error(data.stderr || "Runtime or compile error", {
-					position: "top-center",
-					autoClose: 3500,
-					theme: "dark",
-				});
+				// Legacy response: exitCode-based
+				if (data.exitCode === 0) {
+					toast.success("Code ran successfully", { position: "top-center", autoClose: 2500, theme: "dark" });
+				} else {
+					toast.error(data.stderr || "Runtime or compile error", {
+						position: "top-center",
+						autoClose: 3500,
+						theme: "dark",
+					});
+				}
 			}
 		} catch (error: any) {
 			toast.error(error.message || "Unable to run code", { position: "top-center", autoClose: 3000, theme: "dark" });
@@ -196,7 +214,8 @@ int main() {
 			});
 			return;
 		}
-		if (testCases.length === 0) {
+		// Require judge metadata for function-based problems
+		if (!problem.judgeMetadata) {
 			toast.error("No test cases configured for this problem yet.", {
 				position: "top-center",
 				autoClose: 3000,
@@ -212,7 +231,7 @@ int main() {
 				body: JSON.stringify({
 					language,
 					code: userCode,
-					testCases,
+					metadata: problem.judgeMetadata,
 				}),
 			});
 			const data = await response.json();
@@ -221,7 +240,10 @@ int main() {
 				throw new Error(data.error || "Submit request failed");
 			}
 
-			if (data.passed) {
+			// Function-based judge response: data.status is "accepted" | "wrong_answer" | ...
+			const accepted = data.status === "accepted" || data.passed === true;
+
+			if (accepted) {
 				toast.success("Congrats! All tests passed!", {
 					position: "top-center",
 					autoClose: 3000,
@@ -238,7 +260,7 @@ int main() {
 				});
 				setSolved(true);
 
-				// If this submission is for a match, notify the match document (record submission / win)
+				// If this submission is for a match, notify the match document
 				if (matchId) {
 					try {
 						await fetch(`/api/matches/${matchId}/submit`, {
@@ -250,18 +272,21 @@ int main() {
 						console.error("Failed to notify match submit", err);
 					}
 				}
-			} else if (data.reason === "wrong_answer") {
-				toast.error(`Wrong answer on case ${Number(data.failedAt) + 1}`, {
-					position: "top-center",
-					autoClose: 3500,
-					theme: "dark",
-				});
 			} else {
-				toast.error("Runtime or compile error", {
-					position: "top-center",
-					autoClose: 3500,
-					theme: "dark",
-				});
+				const failedTest = (data.testResults ?? []).find((r: any) => !r.passed);
+				const passed = (data.testResults ?? []).filter((r: any) => r.passed).length;
+				const total = data.testResults?.length ?? 0;
+				const detail = failedTest?.error
+					? failedTest.error
+					: failedTest
+					? `Expected ${JSON.stringify(failedTest.expected)}, got ${JSON.stringify(failedTest.actual)}`
+					: data.message || data.status || "One or more test cases failed";
+				toast.error(
+					total > 0
+						? `${passed}/${total} passed — Test ${(failedTest?.testIndex ?? 0) + 1}: ${detail}`
+						: detail,
+					{ position: "top-center", autoClose: 4000, theme: "dark" }
+				);
 			}
 		} catch (error: any) {
 			toast.error(error.message || "Unable to submit code", {
@@ -295,11 +320,22 @@ int main() {
 	};
 
 	useEffect(() => {
-		const code = localStorage.getItem(codeStorageKey);
+		const stored = localStorage.getItem(codeStorageKey);
+		const defaultCode = getDefaultStarterCode(language);
+
 		if (user) {
-			setUserCode(code ? JSON.parse(code) : getDefaultStarterCode(language));
+			if (!stored) {
+				setUserCode(defaultCode);
+			} else {
+				const parsed = JSON.parse(stored) as string;
+				// If the stored code is the old generic stub, replace it with the proper starter
+				const isOldGenericStub =
+					/^def\s+\w+\s*\(\s*\):\s*\n\s+# Write your solution here\s*\n\s+pass/.test(parsed.trim()) ||
+					/^#include.*\nauto\s+\w+\s*\(\)\s*\{/.test(parsed.trim());
+				setUserCode(isOldGenericStub ? defaultCode : parsed);
+			}
 		} else {
-			setUserCode(getDefaultStarterCode(language));
+			setUserCode(defaultCode);
 		}
 	}, [codeStorageKey, user, language, getDefaultStarterCode]);
 

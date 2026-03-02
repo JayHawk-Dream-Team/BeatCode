@@ -7,6 +7,7 @@
  * Date Created:         2023-03-18
  * Revisions:
  *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *   2026-03-01          Added judge server metadata for function-based invocation (Carlos Mbendera)
  *
  * Preconditions:        N/A — exports static data and a pure validation function.
  * Acceptable Input:     Handler accepts fn(head: ListNode | null) returning the head of
@@ -27,6 +28,7 @@
 
 import assert from "assert";
 import { Problem } from "../types/problem";
+import { JudgeFunctionMetadata } from "../types/judge";
 import example from "./images/reverseLL.jpg";
 
 // JS doesn't have a built in LinkedList class, so we'll create one
@@ -104,6 +106,21 @@ function reverseLinkedList(head) {
   // Write your code here
 };`;
 
+// Judge server metadata for function-based invocation
+// Note: For linked list problems, test cases use array representation
+// The judge server should serialize/deserialize ListNode structures
+const judgeMetadataReverseLinkedList: JudgeFunctionMetadata = {
+	name: "reverseLinkedList",
+	testCases: [
+		{ args: [[1, 2, 3, 4, 5]], expected: [5, 4, 3, 2, 1] },
+		{ args: [[5, 4, 3, 2, 1]], expected: [1, 2, 3, 4, 5] },
+		{ args: [[1, 2, 3]], expected: [3, 2, 1] },
+		{ args: [[1]], expected: [1] },
+	],
+	signature: "function reverseLinkedList(head: ListNode | null): ListNode | null",
+	comparator: "serialize_linked_list",
+};
+
 export const reverseLinkedList: Problem = {
 	id: "reverse-linked-list",
 	title: "2. Reverse Linked List",
@@ -130,7 +147,34 @@ export const reverseLinkedList: Problem = {
 	constraints: `<li class='mt-2'>The number of nodes in the list is the range <code>[0, 5000]</code>.</li>
 <li class='mt-2'><code>-5000 <= Node.val <= 5000</code></li>`,
 	starterCode: starterCodeReverseLinkedListJS,
+	pythonStarterCode: `from typing import Optional
+
+class ListNode:
+    def __init__(self, val=0, next=None):
+        self.val = val
+        self.next = next
+
+def reverseLinkedList(head: Optional[ListNode]) -> Optional[ListNode]:
+    # Write your code here
+    pass`,
+	cppStarterCode: `#include <bits/stdc++.h>
+using namespace std;
+
+struct ListNode {
+    int val;
+    ListNode *next;
+    ListNode() : val(0), next(nullptr) {}
+    ListNode(int x) : val(x), next(nullptr) {}
+    ListNode(int x, ListNode *next) : val(x), next(next) {}
+};
+
+ListNode* reverseLinkedList(ListNode* head) {
+    // Write your code here
+    return nullptr;
+}`,
 	handlerFunction: reverseLinkedListHandler,
 	starterFunctionName: "function reverseLinkedList(",
 	order: 2,
+	judgeMetadata: judgeMetadataReverseLinkedList,
 };
+

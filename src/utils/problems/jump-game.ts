@@ -8,6 +8,7 @@
  * Date Created:         2023-03-18
  * Revisions:
  *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *   2026-03-01          Added judge server metadata for function-based invocation (Carlos Mbendera)
  *
  * Preconditions:        N/A — exports static data and a pure validation function.
  * Acceptable Input:     Handler accepts fn(nums: number[]) returning a boolean indicating
@@ -27,6 +28,7 @@
 
 import assert from "assert";
 import { Problem } from "../types/problem";
+import { JudgeFunctionMetadata } from "../types/judge";
 
 export const jumpGameHandler = (fn: any) => {
 	try {
@@ -51,6 +53,18 @@ export const jumpGameHandler = (fn: any) => {
 const starterCodeJumpGameJS = `function canJump(nums) {
   // Write your code here
 };`;
+
+// Judge server metadata for function-based invocation
+const judgeMetadataJumpGame: JudgeFunctionMetadata = {
+	name: "canJump",
+	testCases: [
+		{ args: [[2, 3, 1, 1, 4]], expected: true },
+		{ args: [[3, 2, 1, 0, 4]], expected: false },
+		{ args: [[2, 0, 0]], expected: true },
+		{ args: [[2, 5, 0, 0]], expected: true },
+	],
+	signature: "function canJump(nums: number[]): boolean",
+};
 
 export const jumpGame: Problem = {
 	id: "jump-game",
@@ -82,7 +96,21 @@ export const jumpGame: Problem = {
 	constraints: `<li class='mt-2'><code>1 <= nums.length <= 10^4</code></li>
     <li class='mt-2'><code>0 <= nums[i] <= 10^5</code></li>`,
 	starterCode: starterCodeJumpGameJS,
+	pythonStarterCode: `from typing import List
+
+def canJump(nums: List[int]) -> bool:
+    # Write your code here
+    pass`,
+	cppStarterCode: `#include <bits/stdc++.h>
+using namespace std;
+
+bool canJump(vector<int>& nums) {
+    // Write your code here
+    return false;
+}`,
 	handlerFunction: jumpGameHandler,
 	starterFunctionName: "function canJump(",
 	order: 3,
+	judgeMetadata: judgeMetadataJumpGame,
 };
+

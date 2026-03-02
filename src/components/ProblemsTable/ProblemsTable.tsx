@@ -4,7 +4,7 @@
  *                       and the current user's solved problem IDs, with an inline YouTube
  *                       modal for solution videos.
  *
- * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
+ * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation, with help from Claude)
  * Date Created:         2023-03-18
  * Revisions:
  *   2026-02-24          Added prologue comments (Carlos Mbendera)
@@ -17,6 +17,8 @@
  *                       mapping to match actual schema: title, difficulty (lowercase),
  *                       tags (array of {name,slug} objects), link, yt_url, beatcode_id,
  *                       id (LeetcodeId); normalised difficulty to title case (Carlos Mbendera)
+ *   2026-03-01          Replaced Firestore fetch with local problems map for testing;
+ *                       removed collection/getDocs imports (Carlos Mbendera, with help from Claude)
  *
  * Preconditions:        Firebase and Firestore must be initialized. The "questions" collection
  *                       must exist with documents from the new schema. setLoadingProblems must
@@ -43,12 +45,13 @@ import { BsCheckCircle } from "react-icons/bs";
 import { AiFillYoutube } from "react-icons/ai";
 import { IoClose } from "react-icons/io5";
 import YouTube from "react-youtube";
-import { collection, doc, getDoc, getDocs, query } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { auth, firestore } from "@/firebase/firebase";
 import { useRouter } from "next/router";
 import { toast } from "react-toastify";
 import { DBProblem } from "@/utils/types/problem";
 import { useAuthState } from "react-firebase-hooks/auth";
+import { problems as localProblems } from "@/utils/problems";
 
 type ProblemsTableProps = {
 	setLoadingProblems: React.Dispatch<React.SetStateAction<boolean>>;
@@ -266,60 +269,37 @@ function extractYoutubeId(url: string): string {
  * Invariants:           setLoadingProblems transitions to false exactly once per mount.
  * Known Faults:         None known.
  */
+// Static metadata for the 5 locally-implemented problems
+const LOCAL_PROBLEM_META: Record<string, { difficulty: string; category: string }> = {
+	"two-sum": { difficulty: "Easy", category: "Array" },
+	"reverse-linked-list": { difficulty: "Easy", category: "Linked List" },
+	"jump-game": { difficulty: "Medium", category: "Dynamic Programming" },
+	"search-a-2d-matrix": { difficulty: "Medium", category: "Binary Search" },
+	"valid-parentheses": { difficulty: "Easy", category: "Stack" },
+};
+
 function useGetProblems(setLoadingProblems: React.Dispatch<React.SetStateAction<boolean>>) {
 	const [problems, setProblems] = useState<DBProblem[]>([]);
 
 	useEffect(() => {
-		// Written by Carlos with help from Claude
-		const getProblems = async () => {
-			setLoadingProblems(true);
-			try {
-				const q = query(collection(firestore, "questions"));
-				const querySnapshot = await getDocs(q);
-				const tmp: DBProblem[] = [];
-				querySnapshot.forEach((docSnap) => {
-					const data = docSnap.data();
-
-					// tags is an array of {name, slug, __typename} objects
-					const tagNames: string[] = Array.isArray(data.tags)
-						? data.tags.map((t: { name: string }) => t.name).filter(Boolean)
-						: [];
-
-					// Normalise difficulty to title case ("easy" → "Easy")
-					const rawDifficulty: string = data.difficulty || "";
-					const difficulty =
-						rawDifficulty.charAt(0).toUpperCase() + rawDifficulty.slice(1).toLowerCase();
-
-					const videoId = data.yt_url ? extractYoutubeId(data.yt_url) : undefined;
-
-					tmp.push({
-						id: docSnap.id,
-						title: data.title || "",
-						category: tagNames.join(", "),
-						difficulty,
-						likes: data.likes || 0,
-						dislikes: data.dislikes || 0,
-						order: data.beatcode_id || data.id || 0,
-						videoId,
-						link: data.link,
-						beatcodeId: String(data.beatcode_id ?? ""),
-						leetcodeId: data.id,
-						description: data.description,
-						tags: tagNames,
-					} as DBProblem);
-				});
-				// Sort by beatcode_id ascending
-				tmp.sort((a, b) => (a.order || 0) - (b.order || 0));
-				setProblems(tmp);
-			} catch (error) {
-				console.error("Failed to fetch problems from Firestore:", error);
-			} finally {
-				setLoadingProblems(false);
-			}
-		};
-
-		getProblems();
+		setLoadingProblems(true);
+		const tmp: DBProblem[] = Object.values(localProblems).map((p) => {
+			const meta = LOCAL_PROBLEM_META[p.id] ?? { difficulty: "Medium", category: "Algorithms" };
+			return {
+				id: p.id,
+				title: p.title,
+				category: meta.category,
+				difficulty: meta.difficulty,
+				likes: 0,
+				dislikes: 0,
+				order: p.order,
+			} as DBProblem;
+		});
+		tmp.sort((a, b) => (a.order || 0) - (b.order || 0));
+		setProblems(tmp);
+		setLoadingProblems(false);
 	}, [setLoadingProblems]);
+
 	return problems;
 }
 

@@ -8,6 +8,7 @@
  * Date Created:         2023-03-18
  * Revisions:
  *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *   2026-03-01          Added judge server metadata for function-based invocation (Carlos Mbendera)
  *
  * Preconditions:        N/A — exports static data and a pure validation function.
  * Acceptable Input:     handlerTwoSum accepts a function fn(nums: number[], target: number)
@@ -29,6 +30,7 @@
 
 import assert from "assert";
 import { Problem } from "../types/problem";
+import { JudgeFunctionMetadata } from "../types/judge";
 
 const starterCodeTwoSum = `function twoSum(nums,target){
   // Write your code here
@@ -62,6 +64,17 @@ const handlerTwoSum = (fn: any) => {
 		console.log("twoSum handler function error");
 		throw new Error(error);
 	}
+};
+
+// Judge server metadata for function-based invocation
+const judgeMetadataTwoSum: JudgeFunctionMetadata = {
+	name: "twoSum",
+	testCases: [
+		{ args: [[2, 7, 11, 15], 9], expected: [0, 1] },
+		{ args: [[3, 2, 4], 6], expected: [1, 2] },
+		{ args: [[3, 3], 6], expected: [0, 1] },
+	],
+	signature: "function twoSum(nums: number[], target: number): number[]",
 };
 
 export const twoSum: Problem = {
@@ -107,6 +120,20 @@ export const twoSum: Problem = {
 </li>`,
 	handlerFunction: handlerTwoSum,
 	starterCode: starterCodeTwoSum,
+	pythonStarterCode: `from typing import List
+
+def twoSum(nums: List[int], target: int) -> List[int]:
+    # Write your code here
+    pass`,
+	cppStarterCode: `#include <bits/stdc++.h>
+using namespace std;
+
+vector<int> twoSum(vector<int>& nums, int target) {
+    // Write your code here
+    return {};
+}`,
 	order: 1,
 	starterFunctionName: "function twoSum(",
+	judgeMetadata: judgeMetadataTwoSum,
 };
+

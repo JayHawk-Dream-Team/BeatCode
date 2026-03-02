@@ -8,6 +8,7 @@
  * Date Created:         2023-03-18
  * Revisions:
  *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *   2026-03-01          Added judge server metadata for function-based invocation (Carlos Mbendera)
  *
  * Preconditions:        N/A — exports static data and a pure validation function.
  * Acceptable Input:     Handler accepts fn(s: string) returning a boolean indicating
@@ -27,6 +28,7 @@
 
 import assert from "assert";
 import { Problem } from "../types/problem";
+import { JudgeFunctionMetadata } from "../types/judge";
 
 export const validParenthesesHandler = (fn: any) => {
 	try {
@@ -46,6 +48,19 @@ export const validParenthesesHandler = (fn: any) => {
 const starterCodeValidParenthesesJS = `function validParentheses(s) {
   // Write your code here
 };`;
+
+// Judge server metadata for function-based invocation
+const judgeMetadataValidParentheses: JudgeFunctionMetadata = {
+	name: "validParentheses",
+	testCases: [
+		{ args: ["()"], expected: true },
+		{ args: ["()[]{}"], expected: true },
+		{ args: ["(]"], expected: false },
+		{ args: ["([)]"], expected: false },
+		{ args: ["{[]}"], expected: true },
+	],
+	signature: "function validParentheses(s: string): boolean",
+};
 
 export const validParentheses: Problem = {
 	id: "valid-parentheses",
@@ -79,6 +94,18 @@ export const validParentheses: Problem = {
 <li class='mt-2 '><code>s</code> consists of parentheses only <code class="text-md">'()[]{}'</code>.</li>`,
 	handlerFunction: validParenthesesHandler,
 	starterCode: starterCodeValidParenthesesJS,
+	pythonStarterCode: `def validParentheses(s: str) -> bool:
+    # Write your code here
+    pass`,
+	cppStarterCode: `#include <bits/stdc++.h>
+using namespace std;
+
+bool validParentheses(string s) {
+    // Write your code here
+    return false;
+}`,
 	starterFunctionName: "function validParentheses(",
 	order: 4,
+	judgeMetadata: judgeMetadataValidParentheses,
 };
+

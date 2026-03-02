@@ -7,6 +7,7 @@
  * Date Created:         2023-03-18
  * Revisions:
  *   2026-02-24          Added prologue comments (Carlos Mbendera)
+ *   2026-03-01          Added judge server metadata for function-based invocation (Carlos Mbendera)
  *
  * Preconditions:        N/A — exports static data and a pure validation function.
  * Acceptable Input:     Handler accepts fn(matrix: number[][], target: number) returning
@@ -26,6 +27,7 @@
 
 import assert from "assert";
 import { Problem } from "../types/problem";
+import { JudgeFunctionMetadata } from "../types/judge";
 import example1 from "./images/search-a-2d-1.jpg";
 import example2 from "./images/search-a-2d-2.jpg";
 
@@ -60,10 +62,42 @@ export const search2DMatrixHandler = (fn: any) => {
 		throw new Error(error);
 	}
 };
+
 const starterCodeSearch2DMatrixJS = `// Do not edit function name
 function searchMatrix(matrix, target) {
   // Write your code here
 };`;
+
+// Judge server metadata for function-based invocation
+const judgeMetadataSearch2DMatrix: JudgeFunctionMetadata = {
+	name: "searchMatrix",
+	testCases: [
+		{
+			args: [
+				[
+					[1, 3, 5, 7],
+					[10, 11, 16, 20],
+					[23, 30, 34, 60],
+				],
+				3,
+			],
+			expected: true,
+		},
+		{
+			args: [
+				[
+					[1, 3, 5, 7],
+					[10, 11, 16, 20],
+					[23, 30, 34, 60],
+				],
+				13,
+			],
+			expected: false,
+		},
+		{ args: [[[1]], 1], expected: true },
+	],
+	signature: "function searchMatrix(matrix: number[][], target: number): boolean",
+};
 
 export const search2DMatrix: Problem = {
 	id: "search-a-2d-matrix",
@@ -108,7 +142,21 @@ export const search2DMatrix: Problem = {
   <li class='mt-2'><code>-10<sup>4</sup> <= matrix[i][j], target <= 10<sup>4</sup></code></li>
   `,
 	starterCode: starterCodeSearch2DMatrixJS,
+	pythonStarterCode: `from typing import List
+
+def searchMatrix(matrix: List[List[int]], target: int) -> bool:
+    # Write your code here
+    pass`,
+	cppStarterCode: `#include <bits/stdc++.h>
+using namespace std;
+
+bool searchMatrix(vector<vector<int>>& matrix, int target) {
+    // Write your code here
+    return false;
+}`,
 	handlerFunction: search2DMatrixHandler,
 	starterFunctionName: "function searchMatrix",
 	order: 5,
+	judgeMetadata: judgeMetadataSearch2DMatrix,
 };
+

@@ -35,10 +35,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       const oppData = opponentDoc.data() as any;
       const batch = writeBatch(firestore);
 
+      const now = new Date();
       const match: Match = {
         players: [
-          { userId, displayName, joinedAt: serverTimestamp() } as MatchPlayer,
-          { userId: oppData.userId, displayName: oppData.displayName, joinedAt: serverTimestamp() } as MatchPlayer,
+          { userId, displayName, joinedAt: now } as unknown as MatchPlayer,
+          { userId: oppData.userId, displayName: oppData.displayName, joinedAt: now } as unknown as MatchPlayer,
         ],
         problemId: problemId || oppData.problemId,
         status: "starting",

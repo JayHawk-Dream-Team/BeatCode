@@ -67,10 +67,32 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems }) => 
 	const [user] = useAuthState(auth);
 	const router = useRouter();
 	const [joiningId, setJoiningId] = useState<string | null>(null);
+	const [pollingInfo, setPollingInfo] = useState<{ problemId: string; userId: string } | null>(null);
 	console.log("solvedProblems", solvedProblems);
 	const closeModal = () => {
 		setYoutubePlayer({ isOpen: false, videoId: "" });
 	};
+
+	// Poll for match if queued
+	useEffect(() => {
+		if (!pollingInfo) return;
+		const interval = setInterval(async () => {
+			try {
+				const res = await fetch("/api/matchmaking/check", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ userId: pollingInfo.userId, problemId: pollingInfo.problemId }),
+				});
+				const data = await res.json();
+				if (data.matchId) {
+					router.push(`/problems/${pollingInfo.problemId}?matchId=${data.matchId}`);
+				}
+			} catch (err) {
+				// ignore
+			}
+		}, 2000);
+		return () => clearInterval(interval);
+	}, [pollingInfo, router]);
 
 	const handleJoin = async (problemId: string) => {
 		if (!user) {
@@ -89,6 +111,7 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems }) => 
 			if (!res.ok) throw new Error(data.error || "Failed to join queue");
 			if (data.queued) {
 				toast.info("Queued for match — waiting for an opponent", { position: "top-center", theme: "dark" });
+				setPollingInfo({ problemId, userId: user.uid });
 			} else {
 				router.push(`/problems/${problemId}?matchId=${data.matchId}`);
 			}

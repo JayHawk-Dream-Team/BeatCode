@@ -10,6 +10,7 @@ import {
   writeBatch,
   doc,
   serverTimestamp,
+  deleteDoc
 } from "firebase/firestore";
 import { firestore } from "../../../firebase/firebase";
 import type { JoinResponse } from "../../../utils/types/matchmaking";
@@ -24,22 +25,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   try {
     const queueCol = collection(firestore, "matchmaking_queue");
 
-    // Try to find a waiting opponent for the same problem (or any if problemId not provided)
-    let q = query(queueCol, orderBy("createdAt"), limit(1));
-    if (problemId) q = query(queueCol, where("problemId", "==", problemId), orderBy("createdAt"), limit(1));
+
+    // Query all queue entries for the same problem (or any if problemId not provided)
+    let q = query(queueCol, orderBy("createdAt"));
+    if (problemId) q = query(queueCol, where("problemId", "==", problemId), orderBy("createdAt"));
 
     const snapshot = await getDocs(q);
-    const opponentDoc = snapshot.docs.find((d) => d.data().userId !== userId);
+    const now = Date.now();
+    const EXPIRATION_MS = 2 * 60 * 1000; // 2 minutes
+    let opponentDoc = null;
+
+    // Clean up expired queue docs and find a valid opponent (not just the oldest)
+    for (const d of snapshot.docs) {
+      const data = d.data();
+      // Firestore serverTimestamp() is not immediately available, so fallback to client if missing
+      const createdAt = (data.createdAt && data.createdAt.toMillis) ? data.createdAt.toMillis() : (data.createdAt ? data.createdAt : 0);
+      if (now - createdAt > EXPIRATION_MS) {
+        // Delete expired doc
+        await deleteDoc(doc(firestore, "matchmaking_queue", d.id));
+        continue;
+      }
+      if (data.userId !== userId) {
+        opponentDoc = d;
+        break;
+      }
+    }
 
     if (opponentDoc) {
       const oppData = opponentDoc.data() as any;
       const batch = writeBatch(firestore);
 
-      const now = new Date();
+      const nowDate = new Date();
       const match: Match = {
         players: [
-          { userId, displayName, joinedAt: now } as unknown as MatchPlayer,
-          { userId: oppData.userId, displayName: oppData.displayName, joinedAt: now } as unknown as MatchPlayer,
+          { userId, displayName, joinedAt: nowDate } as unknown as MatchPlayer,
+          { userId: oppData.userId, displayName: oppData.displayName, joinedAt: nowDate } as unknown as MatchPlayer,
         ],
         problemId: problemId || oppData.problemId,
         status: "starting",

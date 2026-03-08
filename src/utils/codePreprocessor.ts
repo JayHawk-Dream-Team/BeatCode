@@ -148,9 +148,12 @@ export function buildRunnerScript(
 	}
 
 	if (language === "javascript") {
+		// Wrap invocation in an async IIFE and await the result so that async
+		// user functions (returning Promises) are handled correctly. Print JSON
+		// result to stdout and ensure errors write to stderr with non-zero exit.
 		return (
 			processedCode +
-			`\n\nconst _result = ${functionName}(...${jsonArgs});\nprocess.stdout.write(JSON.stringify(_result) + "\\n");\n`
+			`\n\n(async () => {\n  try {\n    const _maybe = ${functionName}(...${jsonArgs});\n    const _result = await Promise.resolve(_maybe);\n    process.stdout.write(JSON.stringify(_result) + "\\n");\n  } catch (e) {\n    process.stderr.write(String(e) + "\\n");\n    process.exit(1);\n  }\n})();\n`
 		);
 	}
 

@@ -70,6 +70,8 @@ export type JudgeTestResult = {
 	actual?: any;
 	/** Error message if compilation/execution failed */
 	error?: string;
+	/** Captured stdout (print/debug lines) from the user's program, excluding the JSON payload */
+	stdout?: string;
 };
 
 /**

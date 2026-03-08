@@ -72,6 +72,7 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	const [storedLanguage, setStoredLanguage] = useLocalStorage("beatcode-language", "javascript");
 	const language = (storedLanguage as JudgeLanguage) || "javascript";
 	const [running, setRunning] = useState(false);
+	const [runStdout, setRunStdout] = useState<string | undefined>(undefined);
 	const [submitting, setSubmitting] = useState(false);
 	const [judgeStatus, setJudgeStatus] = useState<JudgeStatus>("unknown");
 	const [checkingJudge, setCheckingJudge] = useState(false);
@@ -171,6 +172,9 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 					const passed = (data.testResults ?? []).filter((r: any) => r.passed).length;
 					const total = (data.testResults ?? []).length;
 					toast.success(`All ${total} test case${total !== 1 ? "s" : ""} passed! ✓`, { position: "top-center", autoClose: 2500, theme: "dark" });
+					// Collect and expose any printed stdout from the judge results
+					const printed = (data.testResults ?? []).map((r: any) => r.stdout).filter(Boolean).join("\n").trim();
+					setRunStdout(printed || undefined);
 				} else {
 					const failedTest = (data.testResults ?? []).find((r: any) => !r.passed);
 					const passed = (data.testResults ?? []).filter((r: any) => r.passed).length;
@@ -185,6 +189,7 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 						autoClose: 4000,
 						theme: "dark",
 					});
+					setRunStdout(undefined);
 				}
 			} else {
 				// Legacy response: exitCode-based
@@ -429,6 +434,14 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 					) : (
 						<p className='text-sm text-gray-400 mt-4'>No test cases available for this problem.</p>
 					)}
+
+				{/* Captured stdout (printed output) from the last run */}
+				{runStdout ? (
+					<div className='mt-4'>
+						<p className='text-sm font-medium text-white'>Stdout (prints):</p>
+						<pre className='whitespace-pre-wrap bg-dark-fill-3 rounded-lg p-3 text-white mt-2 overflow-auto'>{runStdout}</pre>
+					</div>
+				) : null}
 				</div>
 			</Split>
 			<EditorFooter

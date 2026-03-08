@@ -29,22 +29,89 @@ export function evaluateRunResult(
 		};
 	}
 
-	// Parse the JSON output printed by the driver script
-	let actual: any = undefined;
-	try {
-		actual = JSON.parse((runData.stdout ?? "").trim());
-	} catch {
+	// Parse the JSON output printed by the driver script. Many user solutions
+	// print debugging lines; attempt to recover the JSON payload even when
+	// extra stdout is present (e.g., LeetCode-style prints).
+	const rawStdout = runData.stdout ?? "";
+	const trimmed = rawStdout.trim();
+
+	const tryParse = (s: string | undefined) => {
+		if (s === undefined) return null;
+		try {
+			return JSON.parse(s);
+		} catch {
+			return null;
+		}
+	};
+
+	// 1) Try parsing the whole stdout
+	let actual: any = tryParse(trimmed);
+
+	// 2) If that fails, try the last non-empty line (common when prints precede JSON)
+	if (actual === null) {
+		const lines = trimmed.split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== "");
+		if (lines.length > 0) {
+			actual = tryParse(lines[lines.length - 1]);
+		}
+	}
+
+	// 3) If still failing, attempt to find a trailing JSON object/array by
+	// locating the last '{' or '[' and parsing from there.
+	if (actual === null && trimmed.length > 0) {
+		const lastBraceIdx = Math.max(trimmed.lastIndexOf('{'), trimmed.lastIndexOf('['));
+		if (lastBraceIdx !== -1) {
+			const candidate = trimmed.slice(lastBraceIdx);
+			actual = tryParse(candidate);
+		}
+	}
+
+	if (actual === null) {
 		return {
 			testIndex,
 			passed: false,
 			expected,
-			actual: runData.stdout?.trim(),
+			actual: rawStdout.trim(),
 			error: "Could not parse function output as JSON",
+			stdout: rawStdout.trim(),
 		};
 	}
 
+	// Determine any printed output (everything in stdout except the JSON payload)
+	let printed: string | undefined = undefined;
+	if (trimmed === JSON.stringify(actual)) {
+		printed = undefined;
+	} else {
+		// If the whole stdout parsed as JSON, nothing was printed.
+		// Otherwise try to remove the parsed candidate from the end to leave only prints.
+		const lines = rawStdout.split(/\r?\n/);
+		// If last non-empty line was the JSON payload, drop it.
+		const lastNonEmptyIdx = (() => {
+			for (let i = lines.length - 1; i >= 0; i--) {
+				if (lines[i].trim() !== "") return i;
+			}
+			return -1;
+		})();
+		if (lastNonEmptyIdx >= 0) {
+			const lastLine = lines[lastNonEmptyIdx].trim();
+			if (tryParse(lastLine) !== null) {
+				const printedLines = lines.slice(0, lastNonEmptyIdx);
+				printed = printedLines.join("\n").trim() || undefined;
+			} else {
+				// Fallback: if we extracted candidate from a trailing brace, remove that suffix
+				const lastBraceIdx = Math.max(trimmed.lastIndexOf('{'), trimmed.lastIndexOf('['));
+				if (lastBraceIdx !== -1) {
+					const prefix = trimmed.slice(0, lastBraceIdx).trim();
+					printed = prefix || undefined;
+				} else {
+					printed = rawStdout.trim() || undefined;
+				}
+			}
+		}
+
+	}
+
 	const passed = deepEqual(actual, expected);
-	return { testIndex, passed, expected, actual };
+	return { testIndex, passed, expected, actual, stdout: printed };
 }
 
 /**

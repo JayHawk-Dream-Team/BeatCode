@@ -292,35 +292,42 @@ function extractYoutubeId(url: string): string {
  * Invariants:           setLoadingProblems transitions to false exactly once per mount.
  * Known Faults:         None known.
  */
-// Static metadata for the 5 locally-implemented problems
-const LOCAL_PROBLEM_META: Record<string, { difficulty: string; category: string }> = {
-	"two-sum": { difficulty: "Easy", category: "Array" },
-	"reverse-linked-list": { difficulty: "Easy", category: "Linked List" },
-	"jump-game": { difficulty: "Medium", category: "Dynamic Programming" },
-	"search-a-2d-matrix": { difficulty: "Medium", category: "Binary Search" },
-	"valid-parentheses": { difficulty: "Easy", category: "Stack" },
-};
+
+import { collection, getDocs } from "firebase/firestore";
 
 function useGetProblems(setLoadingProblems: React.Dispatch<React.SetStateAction<boolean>>) {
 	const [problems, setProblems] = useState<DBProblem[]>([]);
 
 	useEffect(() => {
 		setLoadingProblems(true);
-		const tmp: DBProblem[] = Object.values(localProblems).map((p) => {
-			const meta = LOCAL_PROBLEM_META[p.id] ?? { difficulty: "Medium", category: "Algorithms" };
-			return {
-				id: p.id,
-				title: p.title,
-				category: meta.category,
-				difficulty: meta.difficulty,
-				likes: 0,
-				dislikes: 0,
-				order: p.order,
-			} as DBProblem;
-		});
-		tmp.sort((a, b) => (a.order || 0) - (b.order || 0));
-		setProblems(tmp);
-		setLoadingProblems(false);
+		async function fetchProblems() {
+			try {
+				const querySnapshot = await getDocs(collection(firestore, "questions"));
+				const fetched: DBProblem[] = querySnapshot.docs.map((docSnap) => {
+					const data = docSnap.data();
+					return {
+						id: docSnap.id,
+						title: data.title || "Untitled",
+						category: data.category || "Algorithms",
+						difficulty: data.difficulty
+							? data.difficulty.charAt(0).toUpperCase() + data.difficulty.slice(1).toLowerCase()
+							: "Medium",
+						likes: data.likes || 0,
+						dislikes: data.dislikes || 0,
+						order: data.order || 0,
+						videoId: data.videoId,
+						link: data.link,
+					} as DBProblem;
+				});
+				fetched.sort((a, b) => (a.order || 0) - (b.order || 0));
+				setProblems(fetched);
+			} catch (e) {
+				setProblems([]);
+			} finally {
+				setLoadingProblems(false);
+			}
+		}
+		fetchProblems();
 	}, [setLoadingProblems]);
 
 	return problems;

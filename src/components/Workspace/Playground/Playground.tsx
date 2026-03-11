@@ -34,6 +34,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { collection, getDocs } from "firebase/firestore";
 import PreferenceNav from "./PreferenceNav/PreferenceNav";
 import Split from "react-split";
 import CodeMirror from "@uiw/react-codemirror";
@@ -66,6 +67,7 @@ export interface ISettings {
 export type JudgeLanguage = "javascript" | "python" | "cpp";
 export type JudgeStatus = "unknown" | "ok" | "down";
 
+
 const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved, matchId }) => {
 	const [activeTestCaseId, setActiveTestCaseId] = useState<number>(0);
 	const [userCode, setUserCode] = useState<string>(problem.starterCode);
@@ -89,6 +91,26 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	const {
 		query: { pid },
 	} = useRouter();
+
+	// Firestore testcases
+	const [firestoreTestcases, setFirestoreTestcases] = useState<any[]>([]);
+	const [loadingTestcases, setLoadingTestcases] = useState(true);
+
+	useEffect(() => {
+		async function fetchTestcases() {
+			setLoadingTestcases(true);
+			try {
+				const snap = await getDocs(collection(firestore, "questions", problem.id, "testcases"));
+				const cases = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+				setFirestoreTestcases(cases);
+			} catch {
+				setFirestoreTestcases([]);
+			} finally {
+				setLoadingTestcases(false);
+			}
+		}
+		fetchTestcases();
+	}, [problem.id]);
 
 	const getDefaultStarterCode = useCallback(
 		(lang: JudgeLanguage) => {
@@ -115,10 +137,11 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	}, [language]);
 
 	const codeStorageKey = `code-${pid}-${language}`;
-	const testCases = problem.examples.map((example) => ({
-		input: example.inputText || "",
-		expectedOutput: example.outputText || "",
-	}));
+	// Prefer Firestore testcases if available, else fallback to problem.examples
+	const testCases = (firestoreTestcases.length > 0
+		? firestoreTestcases.map(tc => ({ input: tc.input || "", expectedOutput: tc.expectedOutput || "" }))
+		: problem.examples.map((example) => ({ input: example.inputText || "", expectedOutput: example.outputText || "" }))
+	);
 
 	/**
 	 * Artifact:             handleSubmit
@@ -398,24 +421,24 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 						</div>
 					</div>
 
-					{/* Written by Carlos with help from Claude — guard for problems with no examples */}
-					{problem.examples.length > 0 ? (
+					{/* Prefer Firestore testcases if available, else fallback to problem.examples */}
+					{loadingTestcases ? (
+						<p className='text-sm text-gray-400 mt-4'>Loading test cases...</p>
+					) : testCases.length > 0 ? (
 						<>
 							<div className='flex'>
-								{problem.examples.map((example, index) => (
+								{testCases.map((tc, index) => (
 									<div
 										className='mr-2 items-start mt-2 '
-										key={example.id}
+										key={index}
 										onClick={() => setActiveTestCaseId(index)}
 									>
-										<div className='flex flex-wrap items-center gap-y-4'>
-											<div
-												className={`font-medium items-center transition-all focus:outline-none inline-flex bg-dark-fill-3 hover:bg-dark-fill-2 relative rounded-lg px-4 py-1 cursor-pointer whitespace-nowrap
+										<div
+											className={`font-medium items-center transition-all focus:outline-none inline-flex bg-dark-fill-3 hover:bg-dark-fill-2 relative rounded-lg px-4 py-1 cursor-pointer whitespace-nowrap
 												${activeTestCaseId === index ? "text-white" : "text-gray-500"}
 											`}
-											>
-												Case {index + 1}
-											</div>
+										>
+											Test Case {index + 1}
 										</div>
 									</div>
 								))}
@@ -423,11 +446,11 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 							<div className='font-semibold my-4'>
 								<p className='text-sm font-medium mt-4 text-white'>Input:</p>
 								<div className='w-full cursor-text rounded-lg border px-3 py-[10px] bg-dark-fill-3 border-transparent text-white mt-2'>
-									{problem.examples[activeTestCaseId]?.inputText}
+									{testCases[activeTestCaseId]?.input}
 								</div>
 								<p className='text-sm font-medium mt-4 text-white'>Output:</p>
 								<div className='w-full cursor-text rounded-lg border px-3 py-[10px] bg-dark-fill-3 border-transparent text-white mt-2'>
-									{problem.examples[activeTestCaseId]?.outputText}
+									{testCases[activeTestCaseId]?.expectedOutput}
 								</div>
 							</div>
 						</>

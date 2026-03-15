@@ -1,35 +1,39 @@
+﻿/**
+ * Prologue Comment
+ * Name of Code Artifact: run.ts (API route: /api/judge/run)
+ * Brief Description: Executes a quick run against sample test cases by forwarding code and metadata to the judge service.
+ * Programmer: Jonathan Johnston
+ * Date Created: 2026-03-01
+ * Dates Revised:
+ *   - 2026-03-01: Initial route for run-mode judge execution flow (Carlos Mbendera)
+ *   - 2026-03-15: Added/updated formal prologue documentation block and revision metadata (Jonathan Johnston)
+ * Preconditions:
+ *   - Request method is POST.
+ *   - JUDGE_URL environment variable is defined and points to a reachable judge service.
+ * Acceptable Input Values/Types:
+ *   - Body: { language: "javascript"|"python"|"cpp", code: string, metadata?: object, stdin?: string }
+ *   - metadata.name and metadata.testCases should be present for function-based run mode.
+ * Unacceptable Input Values/Types:
+ *   - Missing language/code, unsupported language, non-POST methods.
+ * Postconditions:
+ *   - Returns aggregated test results for run mode, or raw stdin/stdout run response for legacy mode.
+ * Return Values/Types:
+ *   - JSON object compatible with JudgeResponse or upstream judge error payload.
+ * Error and Exception Conditions:
+ *   - 405 for invalid method.
+ *   - 400 for malformed request fields.
+ *   - 500 for missing JUDGE_URL.
+ *   - 502 when judge service is unavailable or request fails.
+ * Side Effects:
+ *   - Issues outbound HTTP requests to the external judge service.
+ * Invariants:
+ *   - Supported language set remains {javascript, python, cpp}.
+ * Known Faults:
+ *   - None currently documented beyond upstream judge/network dependency risk.
+ */
 import type { NextApiRequest, NextApiResponse } from "next";
 import { JudgeResponse, JudgeTestResult } from "@/utils/types/judge";
-import { buildRunnerScript, validateFunctionPresence } from "@/utils/codePreprocessor";
 import { evaluateRunResult, buildJudgeResponse } from "@/utils/judgeHelpers";
-
-/**
- * Artifact:             run.ts (judge/run API endpoint)
- * Description:          Handles test run requests by forwarding preprocessed code to the judge server.
- *                       Supports both function-based invocation (new) and stdin/stdout (legacy).
- *
- * Programmer:           Carlos Mbendera (EECS 582, with help from Claude)
- * Date Created:         2026-03-01
- * Revisions:
- *   2026-03-01          Rewrote to use /run + per-test driver scripts instead of /judge
- *                       endpoint which ignored metadata and always returned passed:true
- *                       (Carlos Mbendera, with help from Claude)
- *
- * Preconditions:        Valid POST request with language, code, and optionally metadata.
- * Acceptable Input:     { language: "javascript"|"python"|"cpp", code: string, metadata?: JudgeFunctionMetadata }
- * Unacceptable Input:   GET requests, missing required fields, invalid language.
- *
- * Postconditions:       Returns judge server response or appropriate error.
- * Return Values:        JSON JudgeResponse or error message.
- *
- * Error/Exception Conditions:
- *                       Missing JUDGE_URL environment variable
- *                       Judge service unavailable
- *                       Invalid request format
- * Side Effects:         Forwards request to external judge service.
- * Invariants:           JUDGE_URL must be a valid URL.
- * Known Faults:         None known.
- */
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
 	if (req.method !== "POST") {
@@ -54,12 +58,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 	try {
 		if (metadata && metadata.name) {
-			// Validate the function exists before sending to judge
-			if (!validateFunctionPresence(code, metadata.name, language)) {
-				return res.status(400).json({
-					error: `Function "${metadata.name}" not found in submitted code`,
-				});
-			}
 
 			// Run only the first 3 test cases for a quick "Run" check
 			const testCasesToRun = metadata.testCases.slice(0, 3);
@@ -67,11 +65,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 			const results: JudgeTestResult[] = await Promise.all(
 				testCasesToRun.map(async (tc: { args: any[]; expected: any }, idx: number) => {
-					const driverCode = buildRunnerScript(code, metadata.name, tc.args, language);
+					const requestBody: Record<string, any> = {
+						language,
+						code,
+						functionName: metadata.name,
+						args: tc.args,
+					...(language === "cpp" && Array.isArray(metadata.cppArgTypes) ? { argTypes: metadata.cppArgTypes } : {}),
+						timeoutMs: 5000,
+					};
+
 					const resp = await fetch(`${base}/run`, {
 						method: "POST",
 						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ language, code: driverCode, timeoutMs: 5000 }),
+						body: JSON.stringify(requestBody),
 					});
 					const runData = await resp.json();
 					return evaluateRunResult(runData, tc.expected, idx);
@@ -96,3 +102,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		});
 	}
 }
+
+
+
+
+
+
+

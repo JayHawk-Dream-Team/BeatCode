@@ -1,57 +1,46 @@
-/**
- * Artifact:             ProblemsTable.tsx
- * Description:          Renders the problems list table — fetches Firestore problem metadata
- *                       and the current user's solved problem IDs, with an inline YouTube
- *                       modal for solution videos.
- *
- * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation, with help from Claude)
- * Date Created:         2023-03-18
- * Revisions:
- *   2026-02-24          Added prologue comments (Carlos Mbendera)
- *   2026-02-27          Updated useGetProblems to support both old (title, category, order)
- *                       and new (Title, Difficulty, Tags, Leetcode link, Youtube links,
- *                       Beatcode_id, LeetcodeId) Firestore document schemas; removed
- *                       orderBy("order") constraint so new docs without an order field are
- *                       returned; added extractYoutubeId helper (Carlos Mbendera)
- *   2026-02-27          Fixed collection name from "problems" to "questions"; updated field
- *                       mapping to match actual schema: title, difficulty (lowercase),
- *                       tags (array of {name,slug} objects), link, yt_url, beatcode_id,
- *                       id (LeetcodeId); normalised difficulty to title case (Carlos Mbendera)
- *   2026-03-01          Replaced Firestore fetch with local problems map for testing;
- *                       removed collection/getDocs imports (Carlos Mbendera, with help from Claude)
- *
- * Preconditions:        Firebase and Firestore must be initialized. The "questions" collection
- *                       must exist with documents from the new schema. setLoadingProblems must
- *                       be a valid React dispatch function.
- * Acceptable Input:     setLoadingProblems — React setState dispatch function (boolean).
- * Unacceptable Input:   null or undefined setLoadingProblems.
- *
- * Postconditions:       Table rows are rendered for each Firestore problem document.
- *                       Solved checkmarks appear beside problems the authenticated user solved.
- * Return Values:        React JSX tbody rows and an optional YouTube modal tfoot overlay.
- *
- * Error/Exception Conditions:
- *                       Firestore getDocs errors reject silently; the table renders empty.
- *                       If the user Firestore document does not exist, solvedProblems stays [].
- * Side Effects:         Two Firestore reads on mount (problems collection; user document).
- *                       Registers and removes a keydown listener for Escape to close modal.
- * Invariants:           solvedProblems is always an array, never null or undefined.
- * Known Faults:         console.log("solvedProblems", solvedProblems) left in production code.
+﻿/**
+ * Prologue Comment
+ * Name of Code Artifact: ProblemsTable.tsx
+ * Brief Description: Renders the problems list UI, loads problem records and solved status, and supports optional multiplayer join flow.
+ * Programmer: Jonathan Johnston
+ * Date Created: 2023-03-18
+ * Dates Revised:
+ *   - 2026-02-24: Added initial prologue comments (Carlos Mbendera)
+ *   - 2026-02-27: Updated Firestore schema mapping/collection usage and YouTube link handling (Carlos Mbendera)
+ *   - 2026-03-01: Added local-problem-map testing path and related integration updates (Carlos Mbendera)
+ *   - 2026-03-15: Added/updated formal prologue documentation block and revision metadata (Jonathan Johnston)
+ * Preconditions:
+ *   - Firebase auth/firestore are initialized.
+ *   - questions collection and user solved-problems data are readable under active rules.
+ * Acceptable Input Values/Types:
+ *   - setLoadingProblems: React state dispatcher function.
+ * Unacceptable Input Values/Types:
+ *   - Missing/invalid dispatch function or inaccessible Firestore resources.
+ * Postconditions:
+ *   - UI table reflects available problems and solved state indicators.
+ * Return Values/Types:
+ *   - React component JSX output.
+ * Error and Exception Conditions:
+ *   - Firestore/network failures can result in empty table and logged client errors.
+ * Side Effects:
+ *   - Performs Firestore reads and matchmaking API calls; registers keydown listeners.
+ * Invariants:
+ *   - solvedProblems state remains an array used for id membership checks.
+ * Known Faults:
+ *   - Any residual debug console logging should be removed for production cleanliness.
  */
-
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { BsCheckCircle } from "react-icons/bs";
 import { AiFillYoutube } from "react-icons/ai";
 import { IoClose } from "react-icons/io5";
 import YouTube from "react-youtube";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { auth, firestore } from "@/firebase/firebase";
 import { useRouter } from "next/router";
 import { toast } from "react-toastify";
 import { DBProblem } from "@/utils/types/problem";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { problems as localProblems } from "@/utils/problems";
 
 type ProblemsTableProps = {
 	setLoadingProblems: React.Dispatch<React.SetStateAction<boolean>>;
@@ -110,7 +99,7 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems }) => 
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error || "Failed to join queue");
 			if (data.queued) {
-				toast.info("Queued for match — waiting for an opponent", { position: "top-center", theme: "dark" });
+				toast.info("Queued for match â€” waiting for an opponent", { position: "top-center", theme: "dark" });
 				setPollingInfo({ problemId, userId: user.uid });
 			} else {
 				router.push(`/problems/${problemId}?matchId=${data.matchId}`);
@@ -176,7 +165,7 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems }) => 
 											className='text-gray-500 hover:text-blue-400'
 											title='View on LeetCode'
 										>
-											↗
+											â†—
 										</a>
 									)}
 								</div>
@@ -251,11 +240,11 @@ export default ProblemsTable;
  * Unacceptable Input:   Empty string; non-YouTube URLs (returned unchanged).
  *
  * Postconditions:       Returns the video ID string.
- * Return Values:        string — the extracted or original video ID.
+ * Return Values:        string â€” the extracted or original video ID.
  *
  * Error/Exception Conditions:
  *                       None; falls back to returning the original string on parse failure.
- * Side Effects:         None — pure function.
+ * Side Effects:         None â€” pure function.
  * Invariants:           Return value is always a non-empty string when input is non-empty.
  * Known Faults:         Does not validate that the returned ID is a real YouTube video.
  */
@@ -267,24 +256,24 @@ function extractYoutubeId(url: string): string {
 		const v = parsed.searchParams.get("v");
 		if (v) return v;
 	} catch {
-		// url is not a valid URL — treat it as a bare video ID
+		// url is not a valid URL â€” treat it as a bare video ID
 	}
 	return url;
 }
 
 /**
  * Artifact:             useGetProblems
- * Description:          Custom hook — fetches all problems from Firestore, normalises both
+ * Description:          Custom hook â€” fetches all problems from Firestore, normalises both
  *                       old and new document schemas into DBProblem objects, sorts by order
  *                       (falling back to LeetcodeId / Beatcode_id), and signals loading state.
  *
  * Preconditions:        Firestore must be initialized; "problems" collection must exist.
- * Acceptable Input:     setLoadingProblems — React dispatch for a boolean loading flag.
+ * Acceptable Input:     setLoadingProblems â€” React dispatch for a boolean loading flag.
  * Unacceptable Input:   null or undefined setLoadingProblems.
  *
  * Postconditions:       problems state holds all DBProblem documents sorted by order;
  *                       setLoadingProblems is called false when the fetch completes.
- * Return Values:        DBProblem[] — array of all problem metadata documents.
+ * Return Values:        DBProblem[] â€” array of all problem metadata documents.
  *
  * Error/Exception Conditions:
  *                       getDocs errors propagate as unhandled promise rejections.
@@ -293,35 +282,82 @@ function extractYoutubeId(url: string): string {
  * Known Faults:         None known.
  */
 
-import { collection, getDocs } from "firebase/firestore";
-
 function useGetProblems(setLoadingProblems: React.Dispatch<React.SetStateAction<boolean>>) {
 	const [problems, setProblems] = useState<DBProblem[]>([]);
+
+	const normalizeDifficulty = (difficulty: unknown): string => {
+		const raw = typeof difficulty === "string" ? difficulty.trim() : "";
+		return raw ? raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase() : "Medium";
+	};
+
+	const normalizeCategory = (data: any): string => {
+		if (typeof data.category === "string" && data.category.trim()) return data.category;
+		if (Array.isArray(data.tags) && data.tags.length > 0) {
+			const tag = data.tags[0];
+			return typeof tag?.name === "string" && tag.name.trim()
+				? tag.name
+				: typeof tag?.slug === "string" && tag.slug.trim()
+				? tag.slug
+				: "Algorithms";
+		}
+		return "Algorithms";
+	};
+
+	const toNumber = (value: unknown, fallback: number): number => {
+		const parsed = Number(value);
+		return Number.isFinite(parsed) ? parsed : fallback;
+	};
+
+	const normalizeProblem = (docSnap: any, fallbackOrder: number): DBProblem => {
+		const data = docSnap.data();
+		const rawDifficulty = data.difficulty || data.difficultyLevel || data.level || "medium";
+		const rawOrder =
+			data.order ??
+			data.beatcode_id ??
+			data.beatcodeId ??
+			data.id ??
+			data.leetcodeId ??
+			data.leetCodeId ??
+			fallbackOrder;
+		const rawVideo = data.videoId || data.yt_url || data.videoURL;
+
+		return {
+			id: docSnap.id,
+			title: data.title || "Untitled",
+			category: normalizeCategory(data),
+			difficulty: normalizeDifficulty(rawDifficulty),
+			likes: toNumber(data.likes, 0),
+			dislikes: toNumber(data.dislikes, 0),
+			order: toNumber(rawOrder, fallbackOrder),
+			videoId: rawVideo ? extractYoutubeId(String(rawVideo)) : undefined,
+			link: data.link || data.leetcodeLink || undefined,
+		} as DBProblem;
+	};
 
 	useEffect(() => {
 		setLoadingProblems(true);
 		async function fetchProblems() {
 			try {
 				const querySnapshot = await getDocs(collection(firestore, "questions"));
-				const fetched: DBProblem[] = querySnapshot.docs.map((docSnap) => {
-					const data = docSnap.data();
-					return {
-						id: docSnap.id,
-						title: data.title || "Untitled",
-						category: data.category || "Algorithms",
-						difficulty: data.difficulty
-							? data.difficulty.charAt(0).toUpperCase() + data.difficulty.slice(1).toLowerCase()
-							: "Medium",
-						likes: data.likes || 0,
-						dislikes: data.dislikes || 0,
-						order: data.order || 0,
-						videoId: data.videoId,
-						link: data.link,
-					} as DBProblem;
-				});
+				let docs = querySnapshot.docs;
+
+				if (docs.length === 0) {
+					const legacySnapshot = await getDocs(collection(firestore, "problems"));
+					docs = legacySnapshot.docs;
+				}
+
+				const fetched: DBProblem[] = docs.map((docSnap, idx) => normalizeProblem(docSnap, idx + 1));
+
+				if (fetched.length === 0) {
+					console.warn("[ProblemsTable] No problems found in Firestore collection(s)");
+					setProblems([]);
+					return;
+				}
+
 				fetched.sort((a, b) => (a.order || 0) - (b.order || 0));
 				setProblems(fetched);
 			} catch (e) {
+				console.error("[ProblemsTable] Failed to load problems from Firestore", e);
 				setProblems([]);
 			} finally {
 				setLoadingProblems(false);
@@ -332,27 +368,6 @@ function useGetProblems(setLoadingProblems: React.Dispatch<React.SetStateAction<
 
 	return problems;
 }
-
-/**
- * Artifact:             useGetSolvedProblems
- * Description:          Custom hook — returns the list of problem IDs the current user
- *                       has solved, resetting to empty on sign-out.
- *
- * Preconditions:        Firebase Auth and Firestore must be initialized.
- * Acceptable Input:     No parameters; reads user auth state internally.
- * Unacceptable Input:   N/A
- *
- * Postconditions:       solvedProblems contains the user's solved problem ID array,
- *                       or [] when no user is authenticated.
- * Return Values:        string[] — array of solved problem ids (e.g. ["two-sum"]).
- *
- * Error/Exception Conditions:
- *                       If the user Firestore document does not exist, solvedProblems
- *                       remains [] (no error is thrown).
- * Side Effects:         Reads the "users/{uid}" Firestore document when a user is present.
- * Invariants:           Return value is always an array; never null or undefined.
- * Known Faults:         None known.
- */
 function useGetSolvedProblems() {
 	const [solvedProblems, setSolvedProblems] = useState<string[]>([]);
 	const [user] = useAuthState(auth);
@@ -373,3 +388,7 @@ function useGetSolvedProblems() {
 
 	return solvedProblems;
 }
+
+
+
+

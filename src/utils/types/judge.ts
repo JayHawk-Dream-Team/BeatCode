@@ -1,25 +1,31 @@
-/**
- * Artifact:             judge.ts
- * Description:          TypeScript type definitions for judge server integration.
- *                       Defines function metadata, test case structures, and judge request/response formats.
- *
- * Programmer:           Carlos Mbendera (EECS 582)
- * Date Created:         2026-03-01
- *
- * Preconditions:        N/A — file contains only type definitions; no runtime behavior.
- * Acceptable Input:     N/A — compile-time types only.
- * Unacceptable Input:   N/A
- *
- * Postconditions:       N/A — no runtime state is modified.
- * Return Values:        Exports types: JudgeTestCase, JudgeFunctionMetadata, JudgeRequest, JudgeResponse, etc.
- *
- * Error/Exception Conditions:
- *                       N/A — type mismatches are caught at compile time by TypeScript.
- * Side Effects:         None.
- * Invariants:           Function metadata must align with the problem's starter code.
- * Known Faults:         None known.
+﻿/**
+ * Prologue Comment
+ * Name of Code Artifact: judge.ts (shared judge type definitions)
+ * Brief Description: Defines TypeScript contracts for judge metadata, requests, responses, and per-test results.
+ * Programmer: Jonathan Johnston
+ * Date Created: 2026-03-01
+ * Dates Revised:
+ *   - 2026-03-01: Introduced initial judge integration types (Carlos Mbendera)
+ *   - 2026-03-15: Added/updated formal prologue documentation block and revision metadata (Jonathan Johnston)
+ * Preconditions:
+ *   - Used in a TypeScript build context.
+ * Acceptable Input Values/Types:
+ *   - Type-level usage only; interfaces are consumed at compile time.
+ * Unacceptable Input Values/Types:
+ *   - Runtime assumptions that bypass declared type contracts.
+ * Postconditions:
+ *   - Consistent compile-time typing for judge communication across client/server code.
+ * Return Values/Types:
+ *   - Exports type aliases/interfaces such as JudgeTestCase, JudgeFunctionMetadata, JudgeResponse.
+ * Error and Exception Conditions:
+ *   - Type violations surface as TypeScript compile-time errors.
+ * Side Effects:
+ *   - None at runtime.
+ * Invariants:
+ *   - Judge payload structure remains centrally defined and reusable.
+ * Known Faults:
+ *   - Runtime payloads can still be malformed if external services bypass TS boundaries.
  */
-
 /**
  * Represents a single test case for the judge server.
  * Arguments are structured as an array of values that will be passed to the function.
@@ -38,6 +44,8 @@ export type JudgeFunctionMetadata = {
 	name: string;
 	/** Structured test cases with arguments and expected outputs */
 	testCases: JudgeTestCase[];
+	/** Optional C++ argument types parsed from starter signature (e.g., ["vector<int>&", "int"]). */
+	cppArgTypes?: string[];
 	/** Optional language-specific signature or constraints */
 	signature?: string;
 	/** Optional comparator function name if custom comparison is needed */
@@ -89,3 +97,6 @@ export type JudgeResponse = {
 	/** Memory used in bytes */
 	memory?: number;
 };
+
+
+

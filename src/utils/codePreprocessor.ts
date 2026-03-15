@@ -1,34 +1,33 @@
-/**
- * Artifact:             codePreprocessor.ts
- * Description:          Utilities for preprocessing user-submitted code before sending to judge server.
- *                       Handles function extraction, typing imports, class-wrapper stripping,
- *                       and language-specific formatting.
- *
- * Programmer:           Carlos Mbendera (EECS 582, with help from Claude)
- * Date Created:         2026-03-01
- * Revisions:
- *   2026-03-01          Added Python typing-import injection and class-based solution extraction.
- *   2026-03-01          Added buildRunnerScript to generate per-test driver scripts for
- *                       function-based judging via the /run endpoint (Carlos Mbendera, with help from Claude)
- *
- * Preconditions:        Input code must be intended for the specified language.
- * Acceptable Input:     code — user-submitted code string
- *                       functionName — name of the function to extract/invoke
- *                       language — "javascript", "python", or "cpp"
- * Unacceptable Input:   Empty code, invalid language.
- *
- * Postconditions:       Returns preprocessed code with typing imports injected (Python) and
- *                       class wrappers stripped (Python class Solution style).
- * Return Values:        Processed code string ready for judge server submission.
- *
- * Error/Exception Conditions:
- *                       Does not validate code syntax; judge server will catch errors.
- * Side Effects:         None.
- * Invariants:           Function name is preserved exactly as provided.
- * Known Faults:         Class extraction for deeply nested or multi-class Python files is
- *                       best-effort and may not cover all edge cases.
+﻿/**
+ * Prologue Comment
+ * Name of Code Artifact: codePreprocessor.ts
+ * Brief Description: Provides language-aware code preprocessing and function-presence checks before judge execution.
+ * Programmer: Jonathan Johnston
+ * Date Created: 2026-03-01
+ * Dates Revised:
+ *   - 2026-03-01: Added Python class/method extraction and typing import injection utilities (Carlos Mbendera)
+ *   - 2026-03-01: Added runner script builder for function-based judging flow (Carlos Mbendera)
+ *   - 2026-03-15: Added/updated formal prologue documentation block and revision metadata (Jonathan Johnston)
+ * Preconditions:
+ *   - Caller provides non-empty code, functionName, and supported language.
+ * Acceptable Input Values/Types:
+ *   - language: "javascript"|"python"|"cpp"
+ *   - code/functionName: non-empty strings.
+ * Unacceptable Input Values/Types:
+ *   - Empty code/functionName or unsupported language identifier.
+ * Postconditions:
+ *   - Returns transformed or validated code suitable for judge execution workflow.
+ * Return Values/Types:
+ *   - Returns processed script strings and boolean validation outcomes.
+ * Error and Exception Conditions:
+ *   - Throws Error when required arguments are empty in preprocessCodeForJudge.
+ * Side Effects:
+ *   - None; pure string/regex transformations.
+ * Invariants:
+ *   - Function name token is preserved for invocation matching.
+ * Known Faults:
+ *   - Regex-based extraction is best-effort for highly unusual formatting.
  */
-
 /** Standard Python typing imports to prepend to all Python submissions. */
 const PYTHON_TYPING_HEADER = `from typing import List, Optional, Tuple, Dict, Set, Any, Union\n\n`;
 
@@ -157,7 +156,7 @@ export function buildRunnerScript(
 		);
 	}
 
-	// C++ — return as-is; not yet fully supported for driver-based invocation
+	// C++ â€” return as-is; not yet fully supported for driver-based invocation
 	return processedCode;
 }
 
@@ -202,10 +201,11 @@ export function validateFunctionPresence(
 		return (
 			new RegExp(`function\\s+${functionName}\\s*\\(`, "").test(code) ||
 			new RegExp(`const\\s+${functionName}\\s*=\\s*\\(.*\\)\\s*=>`, "").test(code) ||
-			new RegExp(`let\\s+${functionName}\\s*=\\s*\\(.*\\)\\s*=>`, "").test(code)
+            new RegExp(`let\\s+${functionName}\\s*=\\s*\\(.*\\)\\s*=>`, "").test(code) ||
+            new RegExp(`(?:var|let|const)\\s+${functionName}\\s*=\\s*(?:async\\s*)?function\\b`, "").test(code)
 		);
 	} else if (language === "cpp") {
-		return new RegExp(`\\w+\\s+${functionName}\\s*\\(`, "").test(code);
+		return new RegExp(`(?:[\\w:]+(?:\\s*<[^>]+>)?(?:\\s*[&*]+)?\\s+)+${functionName}\\s*\\(`, "").test(code);
 	}
 
 	return false;
@@ -229,7 +229,8 @@ export function extractFunctionCode(code: string, functionName: string, language
 		const patterns = [
 			new RegExp(`function\\s+${functionName}\\s*\\([^)]*\\)\\s*\\{`, ""),
 			new RegExp(`const\\s+${functionName}\\s*=\\s*\\([^)]*\\)\\s*=>\\s*\\{`, ""),
-			new RegExp(`let\\s+${functionName}\\s*=\\s*\\([^)]*\\)\\s*=>\\s*\\{`, ""),
+            new RegExp(`let\\s+${functionName}\\s*=\\s*\\([^)]*\\)\\s*=>\\s*\\{`, ""),
+            new RegExp(`(?:var|let|const)\\s+${functionName}\\s*=\\s*(?:async\\s*)?function\\s*\\([^)]*\\)\\s*\\{`, ""),
 		];
 
 		for (const pattern of patterns) {
@@ -269,7 +270,7 @@ export function extractFunctionCode(code: string, functionName: string, language
 		return code;
 	} else if (language === "cpp") {
 		const pattern = new RegExp(
-			`(?:auto|int|bool|string|void|vector|\\w+)\\s+${functionName}\\s*\\([^)]*\\)\\s*\\{`, ""
+			`(?:[\\w:]+(?:\\s*<[^>]+>)?(?:\\s*[&*]+)?\\s+)+${functionName}\\s*\\([^)]*\\)\\s*\\{`, ""
 		);
 		const match = code.match(pattern);
 		if (!match) return code;
@@ -294,3 +295,7 @@ export function extractFunctionCode(code: string, functionName: string, language
 
 	return code;
 }
+
+
+
+

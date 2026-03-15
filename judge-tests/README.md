@@ -21,8 +21,16 @@ JUDGE_URL=https://beatcode-judge-service-production.up.railway.app node judge-te
 
 ## What It Tests
 
-1. JS heavy run: sieve prime count up to 300000
-2. Python heavy run: modular sum of squares up to 2000000
-3. C++ heavy run: sieve prime count up to 500000
-4. Judge endpoint correctness with multiple Python testcases
-5. Small parallel run burst to check concurrent request handling
+1. Function-mode JS heavy run: sieve prime count up to 300000
+2. Function-mode Python heavy run: modular sum of squares up to 2000000
+3. Function-mode C++ heavy run: sieve prime count up to 500000
+4. Function-mode C++ class Solution method run (Two Sum regression check)
+5. Function-mode /judge correctness with multiple test cases
+6. Small parallel function-mode run burst to check concurrent request handling
+
+## Important note
+
+The suite now requires function-mode support (`/run` and `/judge` with `functionName` + `args`).
+If your judge service is still running a legacy stdin/stdout-only version, these tests will fail.
+
+

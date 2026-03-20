@@ -1,38 +1,35 @@
-/**
- * Artifact:             Playground.tsx
- * Description:          Code editor panel — vertically split CodeMirror editor and test
- *                       case viewer. Handles code persistence, submission, and client-side
- *                       execution using new Function() validated by Node's assert library.
- *
- * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
- * Date Created:         2023-03-18
- * Revisions:
- *   2026-02-24          Added prologue comments (Carlos Mbendera)
- *
- * Preconditions:        A valid Problem object must be passed. Firebase and localStorage
- *                       must be accessible. User must be authenticated to submit.
- * Acceptable Input:     problem — Problem with valid starterCode and handlerFunction string;
- *                       setSuccess / setSolved — React dispatch functions (boolean).
- * Unacceptable Input:   Problem missing handlerFunction; null setSuccess or setSolved.
- *
- * Postconditions:       On successful submission, solvedProblems in Firestore is updated
- *                       and setSuccess / setSolved are called with true.
- * Return Values:        React JSX of the vertically split editor and test case panel.
- *
- * Error/Exception Conditions:
- *                       AssertionError from test cases — toast "One or more test cases failed".
- *                       SyntaxError / ReferenceError from new Function() — toast with message.
- *                       Unauthenticated submit — toast "Please login to submit your code".
- *                       Firestore updateDoc failure — error propagates to the browser console.
- * Side Effects:         Writes user code to localStorage on every keystroke (key: "code-{pid}").
- *                       Writes to Firestore solvedProblems array on successful submission.
- *                       Fires toast notifications and triggers confetti via setSuccess(true).
- * Invariants:           userCode always mirrors the current CodeMirror editor content.
- *                       localStorage key format is always "code-{pid}".
- * Known Faults:         new Function() executes arbitrary user JavaScript with no sandboxing;
- *                       malicious code could access window, document, or other browser APIs.
+﻿/**
+ * prologue comment
+ * Name of code artifact: Playground.tsx
+ * Brief description: Main coding playground handling editor state, judge run/submit, multiplayer HUD, penalties, and match-end redirects.
+ * Programmer's name: Jonathan Johnston
+ * Date the code was created: 2023-03-18
+ * Dates the code was revised:
+ *   - 2026-02-24: Added earlier prologue documentation (Carlos Mbendera)
+ *   - 2026-03-19: Added multiplayer polling and winner/loser redirect handling (Jonathan Johnston)
+ *   - 2026-03-20: Added timer HUD, multiplayer starter-code reset behavior, and no-local-persistence for match sessions (Jonathan Johnston)
+ * Brief description of each revision & author: See revision list above.
+ * Preconditions:
+ *   - A valid Problem object is provided.
+ *   - Judge APIs and Firestore are reachable.
+ * Acceptable and unacceptable input values or types, and their meanings:
+ *   - Acceptable: problem data with optional judgeMetadata and optional matchId.
+ *   - Unacceptable: missing required problem fields or malformed judge responses.
+ * Postconditions:
+ *   - User code is run/submitted and UI state reflects judge and match outcomes.
+ * Return values or types, and their meanings:
+ *   - Returns React JSX for the full editor/testcase workspace.
+ * Error and exception condition values or types that can occur, and their meanings:
+ *   - Judge/network failures produce toast errors.
+ *   - Firestore update failures surface as runtime errors/toasts.
+ * Side effects:
+ *   - Writes solved problems to Firestore on accepted submission.
+ *   - Polls multiplayer state endpoint and may redirect to home on match completion.
+ * Invariants:
+ *   - Match HUD timer values are derived from server state when in multiplayer.
+ * Any known faults:
+ *   - High-frequency polling can produce repeated network traffic on unstable connections.
  */
-
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import PreferenceNav from "./PreferenceNav/PreferenceNav";
@@ -67,6 +64,13 @@ export interface ISettings {
 export type JudgeLanguage = "javascript" | "python" | "cpp";
 export type JudgeStatus = "unknown" | "ok" | "down";
 
+function formatMsAsClock(ms: number): string {
+	const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+	const hours = Math.floor(totalSeconds / 3600);
+	const minutes = Math.floor((totalSeconds % 3600) / 60);
+	const seconds = totalSeconds % 60;
+	return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
 
 const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved, matchId }) => {
 	const [activeTestCaseId, setActiveTestCaseId] = useState<number>(0);
@@ -78,6 +82,14 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	const [submitting, setSubmitting] = useState(false);
 	const [judgeStatus, setJudgeStatus] = useState<JudgeStatus>("unknown");
 	const [checkingJudge, setCheckingJudge] = useState(false);
+	const [matchFinished, setMatchFinished] = useState(false);
+	const [matchOutcomeHandled, setMatchOutcomeHandled] = useState(false);
+	const [matchStatusText, setMatchStatusText] = useState<string>("Active");
+	const [myElapsedMs, setMyElapsedMs] = useState<number>(0);
+	const [opponentElapsedMs, setOpponentElapsedMs] = useState<number>(0);
+	const [myPenaltyMs, setMyPenaltyMs] = useState<number>(0);
+	const [opponentPenaltyMs, setOpponentPenaltyMs] = useState<number>(0);
+	const [opponentName, setOpponentName] = useState<string>("Opponent");
 
 	const [fontSize, setFontSize] = useLocalStorage("beatcode-fontSize", "16px");
 
@@ -88,9 +100,10 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	});
 
 	const [user] = useAuthState(auth);
+	const router = useRouter();
 	const {
 		query: { pid },
-	} = useRouter();
+	} = router;
 
 	// Firestore testcases
 	const [firestoreTestcases, setFirestoreTestcases] = useState<any[]>([]);
@@ -111,6 +124,87 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 		}
 		fetchTestcases();
 	}, [problem.id]);
+
+	const notifyMatchSubmission = useCallback(
+		async (result: "accepted" | "failed", details: any) => {
+			if (!matchId || !user) return;
+			try {
+				await fetch(`/api/matches/${matchId}/submit`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						userId: user.uid,
+						result,
+						details,
+					}),
+				});
+			} catch (err) {
+				console.error("Failed to notify match submit", err);
+			}
+		},
+		[matchId, user]
+	);
+
+	useEffect(() => {
+		if (!matchId || !user) return;
+
+		let cancelled = false;
+		let intervalId: NodeJS.Timeout | null = null;
+
+		const pollState = async () => {
+			try {
+				const response = await fetch(`/api/matches/${matchId}/state`);
+				if (!response.ok) return;
+				const data = await response.json();
+				if (cancelled) return;
+				const players = Array.isArray(data?.players) ? data.players : [];
+				const me = players.find((p: any) => p?.userId === user.uid);
+				const opp = players.find((p: any) => p?.userId !== user.uid);
+				if (opp?.displayName) setOpponentName(String(opp.displayName));
+
+				const timers = (data?.timersMs || {}) as Record<string, number>;
+				const penalties = (data?.penaltiesMs || {}) as Record<string, number>;
+				setMyElapsedMs(Number(timers[user.uid] || 0));
+				setOpponentElapsedMs(Number(opp?.userId ? timers[opp.userId] || 0 : 0));
+				setMyPenaltyMs(Number(penalties[user.uid] || 0));
+				setOpponentPenaltyMs(Number(opp?.userId ? penalties[opp.userId] || 0 : 0));
+				setMatchStatusText(data?.status === "finished" ? "Finished" : "Active");
+
+				if (data?.status === "finished" && data?.winner) {
+					setMatchFinished(true);
+					if (!matchOutcomeHandled) {
+						setMatchOutcomeHandled(true);
+						if (data.winner === user.uid) {
+							toast.success("Match ended: You won!", {
+								position: "top-center",
+								autoClose: 2200,
+								theme: "dark",
+							});
+						} else {
+							toast.info("Match ended: Opponent won.", {
+								position: "top-center",
+								autoClose: 2200,
+								theme: "dark",
+							});
+						}
+						setTimeout(() => {
+							if (!cancelled) router.push("/");
+						}, 1200);
+					}
+				}
+			} catch {
+				// ignore transient polling errors
+			}
+		};
+
+		pollState();
+		intervalId = setInterval(pollState, 2000);
+
+		return () => {
+			cancelled = true;
+			if (intervalId) clearInterval(intervalId);
+		};
+	}, [matchId, user, router, matchOutcomeHandled]);
 
 	const getDefaultStarterCode = useCallback(
 		(lang: JudgeLanguage) => {
@@ -151,21 +245,29 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	 * Preconditions:        User must be authenticated. problem.starterFunctionName and
 	 *                       problem.handlerFunction must be valid.
 	 * Acceptable Input:     No parameters; reads userCode and problem from closure.
-	 * Unacceptable Input:   N/A — called only by button click.
+	 * Unacceptable Input:   N/A â€” called only by button click.
 	 *
 	 * Postconditions:       On success: Firestore solvedProblems updated, confetti triggered.
 	 *                       On failure: appropriate toast error shown to the user.
-	 * Return Values:        Promise<void> — no return value; effects are via state and Firestore.
+	 * Return Values:        Promise<void> â€” no return value; effects are via state and Firestore.
 	 *
 	 * Error/Exception Conditions:
-	 *                       AssertionError — caught, toast "One or more test cases failed".
-	 *                       Any other error — caught, toast with error.message.
-	 *                       Not authenticated — early return with toast before execution.
+	 *                       AssertionError â€” caught, toast "One or more test cases failed".
+	 *                       Any other error â€” caught, toast with error.message.
+	 *                       Not authenticated â€” early return with toast before execution.
 	 * Side Effects:         May write to Firestore. Shows toast. Calls setSuccess / setSolved.
 	 * Invariants:           userCode is sliced from starterFunctionName forward before eval.
 	 * Known Faults:         No sandbox around new Function(); user code runs with full access.
 	 */
 	const handleRun = async () => {
+		if (matchFinished) {
+			toast.info("Match has already ended.", {
+				position: "top-center",
+				autoClose: 2200,
+				theme: "dark",
+			});
+			return;
+		}
 		setRunning(true);
 		try {
 			const body: Record<string, any> = { language, code: userCode };
@@ -194,7 +296,7 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 				if (data.status === "accepted") {
 					const passed = (data.testResults ?? []).filter((r: any) => r.passed).length;
 					const total = (data.testResults ?? []).length;
-					toast.success(`All ${total} test case${total !== 1 ? "s" : ""} passed! ✓`, { position: "top-center", autoClose: 2500, theme: "dark" });
+					toast.success(`All ${total} test case${total !== 1 ? "s" : ""} passed! âœ“`, { position: "top-center", autoClose: 2500, theme: "dark" });
 					// Collect and expose any printed stdout from the judge results
 					const printed = (data.testResults ?? []).map((r: any) => r.stdout).filter(Boolean).join("\n").trim();
 					setRunStdout(printed || undefined);
@@ -207,7 +309,7 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 						: failedTest
 						? `Expected ${JSON.stringify(failedTest.expected)}, got ${JSON.stringify(failedTest.actual)}`
 						: data.message || data.status;
-					toast.error(`${passed}/${total} passed — Test ${(failedTest?.testIndex ?? 0) + 1}: ${detail}`, {
+					toast.error(`${passed}/${total} passed â€” Test ${(failedTest?.testIndex ?? 0) + 1}: ${detail}`, {
 						position: "top-center",
 						autoClose: 4000,
 						theme: "dark",
@@ -234,6 +336,14 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	};
 
 	const handleSubmit = async () => {
+		if (matchFinished) {
+			toast.info("Match has already ended.", {
+				position: "top-center",
+				autoClose: 2200,
+				theme: "dark",
+			});
+			return;
+		}
 		if (!user) {
 			toast.error("Please login to submit your code", {
 				position: "top-center",
@@ -289,17 +399,7 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 				setSolved(true);
 
 				// If this submission is for a match, notify the match document
-				if (matchId) {
-					try {
-						await fetch(`/api/matches/${matchId}/submit`, {
-							method: "POST",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({ userId: user.uid, result: "win", details: data }),
-						});
-					} catch (err) {
-						console.error("Failed to notify match submit", err);
-					}
-				}
+				await notifyMatchSubmission("accepted", data);
 			} else {
 				const failedTest = (data.testResults ?? []).find((r: any) => !r.passed);
 				const passed = (data.testResults ?? []).filter((r: any) => r.passed).length;
@@ -311,10 +411,11 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 					: data.message || data.status || "One or more test cases failed";
 				toast.error(
 					total > 0
-						? `${passed}/${total} passed — Test ${(failedTest?.testIndex ?? 0) + 1}: ${detail}`
+						? `${passed}/${total} passed â€” Test ${(failedTest?.testIndex ?? 0) + 1}: ${detail}`
 						: detail,
 					{ position: "top-center", autoClose: 4000, theme: "dark" }
 				);
+				await notifyMatchSubmission("failed", data);
 			}
 		} catch (error: any) {
 			toast.error(error.message || "Unable to submit code", {
@@ -348,8 +449,15 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	};
 
 	useEffect(() => {
-		const stored = localStorage.getItem(codeStorageKey);
 		const defaultCode = getDefaultStarterCode(language);
+
+		// Multiplayer matches should always start from clean starter code.
+		if (matchId) {
+			setUserCode(defaultCode);
+			return;
+		}
+
+		const stored = localStorage.getItem(codeStorageKey);
 
 		if (user) {
 			if (!stored) {
@@ -365,7 +473,7 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 		} else {
 			setUserCode(defaultCode);
 		}
-	}, [codeStorageKey, user, language, getDefaultStarterCode]);
+	}, [codeStorageKey, user, language, getDefaultStarterCode, matchId]);
 
 	/**
 	 * Artifact:             onChange
@@ -373,8 +481,8 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	 *                       localStorage so drafts survive page refreshes.
 	 *
 	 * Preconditions:        pid must be available from the router query.
-	 * Acceptable Input:     value — the full current string content of the CodeMirror editor.
-	 * Unacceptable Input:   N/A — always called by CodeMirror with a valid string.
+	 * Acceptable Input:     value â€” the full current string content of the CodeMirror editor.
+	 * Unacceptable Input:   N/A â€” always called by CodeMirror with a valid string.
 	 *
 	 * Postconditions:       userCode state and localStorage["code-{pid}"] both reflect value.
 	 * Return Values:        void.
@@ -387,7 +495,10 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	 */
 	const onChange = (value: string) => {
 		setUserCode(value);
-		localStorage.setItem(codeStorageKey, JSON.stringify(value));
+		// Keep multiplayer sessions isolated from local draft persistence.
+		if (!matchId) {
+			localStorage.setItem(codeStorageKey, JSON.stringify(value));
+		}
 	};
 
 	return (
@@ -401,6 +512,37 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 				checkingJudge={checkingJudge}
 				onCheckJudge={checkJudgeHealth}
 			/>
+			{matchId && user ? (
+				<div className='px-4 py-2 border-b border-dark-fill-3 bg-dark-layer-2 text-xs text-gray-200'>
+					<div className='flex flex-wrap items-center gap-4'>
+						<span className='font-semibold text-white'>Match: {matchStatusText}</span>
+						<span
+							className={
+								myElapsedMs === opponentElapsedMs
+									? "text-gray-200"
+									: myElapsedMs < opponentElapsedMs
+									? "text-green-400 font-semibold"
+									: "text-red-400 font-semibold"
+							}
+						>
+							You: {formatMsAsClock(myElapsedMs)}
+						</span>
+						<span
+							className={
+								myElapsedMs === opponentElapsedMs
+									? "text-gray-200"
+									: opponentElapsedMs < myElapsedMs
+									? "text-green-400 font-semibold"
+									: "text-red-400 font-semibold"
+							}
+						>
+							{opponentName}: {formatMsAsClock(opponentElapsedMs)}
+						</span>
+						<span>Penalty (you): +{Math.floor(myPenaltyMs / 1000)}s</span>
+						<span>Penalty ({opponentName}): +{Math.floor(opponentPenaltyMs / 1000)}s</span>
+					</div>
+				</div>
+			) : null}
 
 			<Split className='h-[calc(100vh-94px)]' direction='vertical' sizes={[60, 40]} minSize={60}>
 				<div className='w-full overflow-auto'>
@@ -472,9 +614,11 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 				handleSubmit={handleSubmit}
 				running={running}
 				submitting={submitting}
+				isMultiplayer={Boolean(matchId)}
 			/>
 		</div>
 	);
 };
 export default Playground;
+
 

@@ -1,33 +1,33 @@
 ﻿/**
- * Prologue Comment
- * Name of Code Artifact: ProblemsTable.tsx
- * Brief Description: Renders the problems list UI, loads problem records and solved status, and supports optional multiplayer join flow.
- * Programmer: Jonathan Johnston
- * Date Created: 2023-03-18
- * Dates Revised:
- *   - 2026-02-24: Added initial prologue comments (Carlos Mbendera)
- *   - 2026-02-27: Updated Firestore schema mapping/collection usage and YouTube link handling (Carlos Mbendera)
- *   - 2026-03-01: Added local-problem-map testing path and related integration updates (Carlos Mbendera)
- *   - 2026-03-15: Added/updated formal prologue documentation block and revision metadata (Jonathan Johnston)
+ * prologue comment
+ * Name of code artifact: ProblemsTable.tsx
+ * Brief description: Renders the problems table, solved-status indicators, and multiplayer queue actions.
+ * Programmer's name: Jonathan Johnston
+ * Date the code was created: 2023-03-18
+ * Dates the code was revised:
+ *   - 2026-02-24: Added earlier prologue documentation (Carlos Mbendera)
+ *   - 2026-02-27: Updated Firestore schema mapping and problem loading behavior (Carlos Mbendera)
+ *   - 2026-03-01: Added local problem map/testing-related updates (Carlos Mbendera)
+ *   - 2026-03-20: Updated multiplayer join flow to prefer Firestore displayName and fixed UI text encoding artifacts (Jonathan Johnston)
+ * Brief description of each revision & author: See revision list above.
  * Preconditions:
- *   - Firebase auth/firestore are initialized.
- *   - questions collection and user solved-problems data are readable under active rules.
- * Acceptable Input Values/Types:
- *   - setLoadingProblems: React state dispatcher function.
- * Unacceptable Input Values/Types:
- *   - Missing/invalid dispatch function or inaccessible Firestore resources.
+ *   - Firebase auth and firestore clients are initialized.
+ *   - questions collection is readable under active rules.
+ * Acceptable and unacceptable input values or types, and their meanings:
+ *   - Acceptable: setLoadingProblems as a React state dispatcher.
+ *   - Unacceptable: missing dispatcher or denied Firestore access; table may render with empty data.
  * Postconditions:
- *   - UI table reflects available problems and solved state indicators.
- * Return Values/Types:
- *   - React component JSX output.
- * Error and Exception Conditions:
- *   - Firestore/network failures can result in empty table and logged client errors.
- * Side Effects:
- *   - Performs Firestore reads and matchmaking API calls; registers keydown listeners.
+ *   - Problem rows and multiplayer actions are rendered according to fetched data.
+ * Return values or types, and their meanings:
+ *   - Returns React JSX markup for table body and optional video modal.
+ * Error and exception condition values or types that can occur, and their meanings:
+ *   - Firestore/network failures may produce empty lists and user-facing toast errors.
+ * Side effects:
+ *   - Performs Firestore reads and matchmaking API calls.
  * Invariants:
- *   - solvedProblems state remains an array used for id membership checks.
- * Known Faults:
- *   - Any residual debug console logging should be removed for production cleanliness.
+ *   - solvedProblems remains an array used for membership checks.
+ * Any known faults:
+ *   - Debug logging may still appear in development output.
  */
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
@@ -91,15 +91,33 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems }) => 
 		}
 		try {
 			setJoiningId(problemId);
+			let dbDisplayName = "";
+			try {
+				const userSnap = await getDoc(doc(firestore, "users", user.uid));
+				if (userSnap.exists()) {
+					const userData = userSnap.data() as any;
+					dbDisplayName =
+						(typeof userData?.displayName === "string" && userData.displayName.trim()) ||
+						(typeof userData?.username === "string" && userData.username.trim()) ||
+						"";
+				}
+			} catch {
+				// fallback below
+			}
+			const preferredDisplayName =
+				dbDisplayName ||
+				(user.displayName && user.displayName.trim()) ||
+				(user.email ? user.email.split("@")[0] : "") ||
+				"Player";
 			const res = await fetch("/api/matchmaking/join", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ userId: user.uid, displayName: user.email, problemId }),
+				body: JSON.stringify({ userId: user.uid, displayName: preferredDisplayName, problemId }),
 			});
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error || "Failed to join queue");
 			if (data.queued) {
-				toast.info("Queued for match â€” waiting for an opponent", { position: "top-center", theme: "dark" });
+				toast.info("Queued for match - waiting for an opponent", { position: "top-center", theme: "dark" });
 				setPollingInfo({ problemId, userId: user.uid });
 			} else {
 				router.push(`/problems/${problemId}?matchId=${data.matchId}`);
@@ -165,7 +183,7 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems }) => 
 											className='text-gray-500 hover:text-blue-400'
 											title='View on LeetCode'
 										>
-											â†—
+											&#8599;
 										</a>
 									)}
 								</div>
@@ -388,6 +406,9 @@ function useGetSolvedProblems() {
 
 	return solvedProblems;
 }
+
+
+
 
 
 

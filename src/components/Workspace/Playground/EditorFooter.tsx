@@ -1,29 +1,31 @@
-/**
- * Artifact:             EditorFooter.tsx
- * Description:          Sticky footer bar at the bottom of the Playground panel containing
- *                       a decorative Console toggle and the Run / Submit action buttons.
- *
- * Programmer:           Burak Örkmez (original); Carlos Mbendera (EECS 582 adaptation)
- * Date Created:         2023-03-18
- * Revisions:
- *   2026-02-24          Added prologue comments (Carlos Mbendera)
- *
- * Preconditions:        handleSubmit must be a callable function provided by Playground.
- * Acceptable Input:     handleSubmit — async function with no parameters that triggers
- *                       code extraction, execution, and Firestore update on success.
- * Unacceptable Input:   null or undefined handleSubmit.
- *
- * Postconditions:       Clicking Run or Submit invokes handleSubmit.
- * Return Values:        React JSX of the footer bar.
- *
- * Error/Exception Conditions:
- *                       Errors thrown by handleSubmit are caught and handled inside Playground.
- * Side Effects:         Calls handleSubmit on button click, which may write to Firestore.
- * Invariants:           Both Run and Submit call the same handleSubmit function; there is
- *                       no behavioral distinction between the two buttons.
- * Known Faults:         The Console button does not open a real console; it is decorative only.
+﻿/**
+ * prologue comment
+ * Name of code artifact: EditorFooter.tsx
+ * Brief description: Renders editor footer controls for run/submit actions, with multiplayer-specific run-button hiding.
+ * Programmer's name: Jonathan Johnston
+ * Date the code was created: 2023-03-18
+ * Dates the code was revised:
+ *   - 2026-02-24: Added earlier prologue documentation (Carlos Mbendera)
+ *   - 2026-03-20: Added multiplayer-aware UI behavior to hide Run button during matches (Jonathan Johnston)
+ * Brief description of each revision & author: See revision list above.
+ * Preconditions:
+ *   - Parent component provides callable handlers and loading flags.
+ * Acceptable and unacceptable input values or types, and their meanings:
+ *   - Acceptable: handleRun/handleSubmit callbacks, running/submitting booleans, optional isMultiplayer boolean.
+ *   - Unacceptable: missing handlers; button actions will fail at runtime.
+ * Postconditions:
+ *   - Footer actions are rendered and wired to callbacks.
+ * Return values or types, and their meanings:
+ *   - Returns React JSX footer controls.
+ * Error and exception condition values or types that can occur, and their meanings:
+ *   - Callback exceptions propagate to parent-level handling.
+ * Side effects:
+ *   - Invokes provided handlers on button clicks.
+ * Invariants:
+ *   - Submit button is always available; Run button is hidden only in multiplayer mode.
+ * Any known faults:
+ *   - Console toggle remains decorative and does not open a full console panel.
  */
-
 import React from "react";
 import { BsChevronUp } from "react-icons/bs";
 
@@ -32,9 +34,10 @@ type EditorFooterProps = {
 	handleSubmit: () => void;
 	running: boolean;
 	submitting: boolean;
+	isMultiplayer?: boolean;
 };
 
-const EditorFooter: React.FC<EditorFooterProps> = ({ handleRun, handleSubmit, running, submitting }) => {
+const EditorFooter: React.FC<EditorFooterProps> = ({ handleRun, handleSubmit, running, submitting, isMultiplayer = false }) => {
 	return (
 		<div className='flex bg-dark-layer-1 absolute bottom-0 z-10 w-full'>
 			<div className='mx-5 my-[10px] flex justify-between w-full'>
@@ -47,13 +50,15 @@ const EditorFooter: React.FC<EditorFooterProps> = ({ handleRun, handleSubmit, ru
 					</button>
 				</div>
 				<div className='ml-auto flex items-center space-x-4'>
-					<button
-						className='px-3 py-1.5 text-sm font-medium items-center whitespace-nowrap transition-all focus:outline-none inline-flex bg-dark-fill-3  hover:bg-dark-fill-2 text-dark-label-2 rounded-lg'
-						onClick={handleRun}
-						disabled={running || submitting}
-					>
-						{running ? "Running..." : "Run"}
-					</button>
+					{!isMultiplayer && (
+						<button
+							className='px-3 py-1.5 text-sm font-medium items-center whitespace-nowrap transition-all focus:outline-none inline-flex bg-dark-fill-3  hover:bg-dark-fill-2 text-dark-label-2 rounded-lg'
+							onClick={handleRun}
+							disabled={running || submitting}
+						>
+							{running ? "Running..." : "Run"}
+						</button>
+					)}
 					<button
 						className='px-3 py-1.5 font-medium items-center transition-all focus:outline-none inline-flex text-sm text-white bg-dark-green-s hover:bg-green-3 rounded-lg'
 						onClick={handleSubmit}
@@ -67,3 +72,4 @@ const EditorFooter: React.FC<EditorFooterProps> = ({ handleRun, handleSubmit, ru
 	);
 };
 export default EditorFooter;
+

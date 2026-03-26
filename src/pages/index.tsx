@@ -29,13 +29,30 @@ import ProblemsTable from "@/components/ProblemsTable/ProblemsTable";
 import Topbar from "@/components/Topbar/Topbar";
 import useHasMounted from "@/hooks/useHasMounted";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function Home() {
 	const [loadingProblems, setLoadingProblems] = useState(true);
+	const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null);
+	const [showDifficultyDropdown, setShowDifficultyDropdown] = useState(false);
+	const dropdownRef = useRef<HTMLDivElement>(null);
 	const hasMounted = useHasMounted();
 
+	// Close dropdown when clicking outside
+	useEffect(() => {
+		function handleClickOutside(event: MouseEvent) {
+			if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+				setShowDifficultyDropdown(false);
+			}
+		}
+
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
+
 	if (!hasMounted) return null;
+
+	const difficultyOptions = ["All", "Easy", "Medium", "Hard"];
 
 	return (
 		<>
@@ -66,8 +83,47 @@ export default function Home() {
 									<th scope='col' className='px-6 py-3 w-0 font-medium'>
 										Title
 									</th>
-									<th scope='col' className='px-6 py-3 w-0 font-medium'>
-										Difficulty
+									<th scope='col' className='px-6 py-3 w-0 font-medium relative'>
+										<div ref={dropdownRef} className='relative inline-block'>
+											<button
+												onClick={() => setShowDifficultyDropdown(!showDifficultyDropdown)}
+												className='flex items-center gap-2 hover:text-gray-300 transition-colors'
+											>
+												Difficulty
+												<svg
+													className={`w-4 h-4 transition-transform ${showDifficultyDropdown ? 'rotate-180' : ''}`}
+													fill='none'
+													stroke='currentColor'
+													viewBox='0 0 24 24'
+												>
+													<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 14l-7 7m0 0l-7-7m7 7V3' />
+												</svg>
+											</button>
+											{showDifficultyDropdown && (
+												<div
+													className='absolute top-full left-0 mt-1 bg-dark-layer-1 border border-gray-600 rounded shadow-lg z-50'
+													onClick={(e) => e.stopPropagation()}
+												>
+													{difficultyOptions.map((difficulty) => (
+														<button
+															key={difficulty}
+															onClick={() => {
+																setSelectedDifficulty(difficulty === "All" ? null : difficulty);
+																setShowDifficultyDropdown(false);
+															}}
+															className={`block w-full text-left px-4 py-2 hover:bg-dark-fill-2 transition-colors ${
+																(difficulty === "All" && selectedDifficulty === null) ||
+																selectedDifficulty === difficulty
+																	? "bg-dark-fill-3 text-gray-100"
+																	: "text-gray-400"
+															}`}
+														>
+															{difficulty}
+														</button>
+													))}
+												</div>
+											)}
+										</div>
 									</th>
 
 									<th scope='col' className='px-6 py-3 w-0 font-medium'>
@@ -79,7 +135,7 @@ export default function Home() {
 								</tr>
 							</thead>
 						)}
-						<ProblemsTable setLoadingProblems={setLoadingProblems} />
+						<ProblemsTable setLoadingProblems={setLoadingProblems} selectedDifficulty={selectedDifficulty} />
 					</table>
 				</div>
 			</main>

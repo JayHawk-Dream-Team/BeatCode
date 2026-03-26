@@ -44,9 +44,10 @@ import { useAuthState } from "react-firebase-hooks/auth";
 
 type ProblemsTableProps = {
 	setLoadingProblems: React.Dispatch<React.SetStateAction<boolean>>;
+	selectedDifficulty?: string | null;
 };
 
-const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems }) => {
+const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems, selectedDifficulty }) => {
 	const [youtubePlayer, setYoutubePlayer] = useState({
 		isOpen: false,
 		videoId: "",
@@ -58,6 +59,12 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems }) => 
 	const [joiningId, setJoiningId] = useState<string | null>(null);
 	const [pollingInfo, setPollingInfo] = useState<{ problemId: string; userId: string } | null>(null);
 	console.log("solvedProblems", solvedProblems);
+	
+	// Filter problems based on selected difficulty
+	const filteredProblems = selectedDifficulty
+		? problems.filter((problem) => problem.difficulty === selectedDifficulty)
+		: problems;
+
 	const closeModal = () => {
 		setYoutubePlayer({ isOpen: false, videoId: "" });
 	};
@@ -154,7 +161,7 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems }) => 
 	return (
 		<>
 			<tbody className='text-white'>
-				{problems.map((problem, idx) => {
+				{filteredProblems.map((problem, idx) => {
 					const difficulyColor =
 						problem.difficulty === "Easy"
 							? "text-dark-green-s"

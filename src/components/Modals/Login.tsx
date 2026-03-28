@@ -85,57 +85,60 @@ const Login: React.FC<LoginProps> = () => {
 	}, [error]);
 	return (
 		<form className='space-y-6 px-6 pb-4' onSubmit={handleLogin}>
-			<h3 className='text-xl font-medium text-white'>Sign in to BeatCode</h3>
-			<div>
-				<label htmlFor='email' className='text-sm font-medium block mb-2 text-gray-300'>
-					Your Email
+			<h3 className='text-xl font-bold text-on-surface'>Welcome Back</h3>
+			<div className='space-y-2'>
+				<label htmlFor='email' className='text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1'>
+					Identity
 				</label>
 				<input
 					onChange={handleInputChange}
 					type='email'
 					name='email'
 					id='email'
-					className='
-            border-2 outline-none sm:text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5
-            bg-gray-600 border-gray-500 placeholder-gray-400 text-white
-        '
-					placeholder='name@company.com'
+					className='w-full bg-surface-container-highest border-none rounded-lg py-3 px-4 text-on-surface placeholder:text-outline transition-all focus:ring-1 focus:ring-primary/40 focus:bg-surface-container-high'
+					placeholder='email@example.com'
 				/>
 			</div>
-			<div>
-				<label htmlFor='password' className='text-sm font-medium block mb-2 text-gray-300'>
-					Your Password
-				</label>
+			<div className='space-y-2'>
+				<div className='flex justify-between items-center px-1'>
+					<label htmlFor='password' className='text-xs font-bold uppercase tracking-widest text-on-surface-variant'>
+						Protocol
+					</label>
+					<a className='text-xs font-bold uppercase tracking-widest text-primary hover:text-primary-container transition-colors cursor-pointer' onClick={() => handleClick("forgotPassword")}>
+						Recover?
+					</a>
+				</div>
 				<input
 					onChange={handleInputChange}
 					type='password'
 					name='password'
 					id='password'
-					className='
-            border-2 outline-none sm:text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5
-            bg-gray-600 border-gray-500 placeholder-gray-400 text-white
-        '
-					placeholder='*******'
+					className='w-full bg-surface-container-highest border-none rounded-lg py-3 px-4 text-on-surface placeholder:text-outline transition-all focus:ring-1 focus:ring-primary/40 focus:bg-surface-container-high'
+					placeholder='••••••••'
 				/>
 			</div>
 
 			<button
 				type='submit'
-				className='w-full text-white focus:ring-blue-300 font-medium rounded-lg
-                text-sm px-5 py-2.5 text-center bg-brand-orange hover:bg-brand-orange-s
-            '
+				className='w-full py-3.5 rounded-lg text-on-primary-container font-bold text-sm tracking-wide uppercase shadow-lg active:scale-[0.98] transition-all duration-150 hover:brightness-110'
+				style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-container))" }}
 			>
-				{loading ? "Loading..." : "Log In"}
+				{loading ? "Loading..." : "Sign In"}
 			</button>
-			<button className='flex w-full justify-end' onClick={() => handleClick("forgotPassword")}>
-				<a href='#' className='text-sm block text-brand-orange hover:underline w-full text-right'>
-					Forgot Password?
-				</a>
-			</button>
-			<div className='text-sm font-medium text-gray-300'>
+
+			{/* External Authentication Divider */}
+			<div className='relative my-8'>
+				<div className='absolute inset-0 flex items-center'>
+					<div className='w-full border-t' style={{ borderColor: "rgba(70, 69, 84, 0.15)" }}></div>
+				</div>
+			</div>
+
+			{/* Social Authentication Buttons */}
+
+			<div className='text-xs font-bold uppercase tracking-widest text-on-surface-variant text-center pt-2'>
 				Not Registered?{" "}
-				<a href='#' className='text-blue-700 hover:underline' onClick={() => handleClick("register")}>
-					Create account
+				<a href='#' className='text-primary font-bold hover:underline cursor-pointer' onClick={() => handleClick("register")}>
+					Create Account
 				</a>
 			</div>
 		</form>

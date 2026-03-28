@@ -1,6 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fira+Code:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* DESIGN TOKENS (KINETIC MONOLITH) */
+:root {
+	--surface: #131313;
+	--surface-container-low: #1C1B1B;
+	--surface-container: #20201F;
+	--surface-container-high: #2A2A2A;
+	--surface-container-highest: #353535;
+	--surface-container-lowest: #0E0E0E;
+	--surface-variant: #353535;
+	--primary: #C0C1FF;
+	--primary-container: #8083FF;
+	--on-primary-container: #0D0096;
+	--on-surface: #E5E2E1;
+	--on-surface-variant: #C7C4D7;
+	--outline-variant: #464554;
+	--surface-tint: #C0C1FF;
+	--tertiary: #5adc48;
+	--secondary: #FFDB9D;
+	--error: #FFB4AB;
+	--error-container: #93000A;
+}
 
 /* RESET */
 * {
@@ -10,19 +34,41 @@
 }
 
 body {
-	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell,
-		"Open Sans", "Helvetica Neue", sans-serif;
+	font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+	background: var(--surface);
+	color: var(--on-surface);
 	height: 100vh;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/* selection */
+::selection { background: color-mix(in srgb, var(--primary) 30%, transparent); color: var(--on-surface); }
+
+/* glass effect utility */
+.glass-effect {
+	background: rgba(53, 53, 53, 0.6);
+	backdrop-filter: blur(20px);
 }
 
 @layer components {
 	.preferenceBtn {
-		@apply relative rounded px-3 py-1.5 font-medium items-center transition-all focus:outline-none inline-flex  ml-auto p-1 mr-2 hover:bg-dark-fill-3;
+		@apply relative rounded px-3 py-1.5 font-medium items-center transition-all focus:outline-none inline-flex ml-auto p-1 mr-2;
+	}
+
+	.preferenceBtn:hover {
+		background-color: var(--surface-container-high);
 	}
 
 	.preferenceBtn-tooltip {
-		@apply absolute w-auto p-2 text-sm m-2  min-w-max translate-x-3  right-0 top-5 z-10 rounded-md shadow-md
-		text-dark-layer-2 bg-gray-200  origin-center scale-0 transition-all duration-100 ease-linear group-hover:scale-100;
+		@apply absolute w-auto p-2 text-sm m-2 min-w-max translate-x-3 right-0 top-5 z-10 rounded-md shadow-md origin-center scale-0 transition-all duration-100 ease-linear;
+		color: var(--on-surface-variant);
+		background-color: var(--surface-container);
+	}
+
+	.group:hover .preferenceBtn-tooltip {
+		transform: scale(1);
+		opacity: 1;
 	}
 }
 
@@ -73,24 +119,21 @@ body {
 }
 
 code {
-	border-radius: 5px;
-	border-width: 1px;
-	font-family: sans-serif;
-	font-size: 0.75rem;
+	border-radius: 8px;
+	font-family: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+	font-size: 0.8125rem;
 	font-weight: 500;
-	line-height: 1rem;
-	padding: 0.125rem;
-	letter-spacing: 1px;
+	line-height: 1.1rem;
+	padding: 0.125rem 0.25rem;
 	white-space: pre-wrap;
-	background-color: hsla(0, 0%, 100%, 0.07);
-	border-color: rgba(247, 250, 255, 0.12);
-	color: rgba(239, 241, 246, 0.75);
+	background-color: rgba(255,255,255,0.02);
+	color: var(--on-surface-variant);
 }
 
 .example-card pre {
-	background-color: hsla(0, 0%, 100%, 0.1);
+	background-color: var(--surface-container-lowest);
 	border-radius: 0.5rem;
-	color: rgba(239, 241, 246, 0.75);
+	color: var(--on-surface-variant);
 	font-size: 0.98rem;
 	line-height: 1.25rem;
 	margin-bottom: 1rem;

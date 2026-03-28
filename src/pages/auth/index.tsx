@@ -51,7 +51,7 @@ const AuthPage: React.FC<AuthPageProps> = () => {
 	if (pageLoading) return null;
 
 	return (
-		<div className='bg-dark-layer-2 h-screen relative'>
+		<div className='h-screen relative' style={{ background: "linear-gradient(to bottom, var(--surface), var(--surface-container-lowest))" }}>
 			<div className='max-w-7xl mx-auto'>
 				<Navbar />
 				{authModal.isOpen && <AuthModal />}

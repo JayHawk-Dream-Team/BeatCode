@@ -31,51 +31,70 @@ import { auth } from "@/firebase/firebase";
 import React, { useState, useEffect } from "react";
 import { useSendPasswordResetEmail } from "react-firebase-hooks/auth";
 import { toast } from "react-toastify";
+import { authModalState } from "@/atoms/authModalAtom";
+import { useSetRecoilState } from "recoil";
+
 type ResetPasswordProps = {};
 
 const ResetPassword: React.FC<ResetPasswordProps> = () => {
 	const [email, setEmail] = useState("");
 	const [sendPasswordResetEmail, sending, error] = useSendPasswordResetEmail(auth);
+	const setAuthModalState = useSetRecoilState(authModalState);
+
 	const handleReset = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		const success = await sendPasswordResetEmail(email);
 		if (success) {
 			toast.success("Password reset email sent", { position: "top-center", autoClose: 3000, theme: "dark" });
+			setAuthModalState((prev) => ({ ...prev, type: "login" }));
 		}
+	};
+
+	const handleBackClick = () => {
+		setAuthModalState((prev) => ({ ...prev, type: "login" }));
 	};
 
 	useEffect(() => {
 		if (error) {
-			alert(error.message);
+			toast.error(error.message, { position: "top-center", autoClose: 3000, theme: "dark" });
 		}
 	}, [error]);
+
 	return (
-		<form className='space-y-6 px-6 lg:px-8 pb-4 sm:pb-6 xl:pb-8' onSubmit={handleReset}>
-			<h3 className='text-xl font-medium  text-white'>Reset Password</h3>
-			<p className='text-sm text-white '>
-				Forgotten your password? Enter your e-mail address below, and we&apos;ll send you an e-mail allowing you
-				to reset it.
+		<form className='space-y-6 px-6 pb-4' onSubmit={handleReset}>
+			<div className='flex items-center justify-between'>
+				<h3 className='text-xl font-bold text-on-surface'>Reset Access</h3>
+				<button
+					type='button'
+					className='text-xs font-bold uppercase tracking-widest text-primary hover:text-primary-container transition-colors cursor-pointer'
+					onClick={handleBackClick}
+				>
+					← Back
+				</button>
+			</div>
+			<p className='text-sm text-on-surface-variant'>
+				Forgotten your protocol? Enter your identity below, and we&apos;ll send you a recovery link.
 			</p>
 			<div>
-				<label htmlFor='email' className='text-sm font-medium block mb-2 text-gray-300'>
-					Your email
+				<label htmlFor='email' className='text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1 block mb-2'>
+					Identity
 				</label>
 				<input
 					type='email'
 					name='email'
 					onChange={(e) => setEmail(e.target.value)}
 					id='email'
-					className='border-2 outline-none sm:text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 bg-gray-600 border-gray-500 placeholder-gray-400 text-white'
-					placeholder='name@company.com'
+					className='w-full bg-surface-container-highest border-none rounded-lg py-3 px-4 text-on-surface placeholder:text-outline transition-all focus:ring-1 focus:ring-primary/40 focus:bg-surface-container-high'
+					placeholder='email@example.com'
 				/>
 			</div>
 
 			<button
 				type='submit'
-				className={`w-full text-white  focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center 
-                bg-brand-orange hover:bg-brand-orange-s `}
+				className='w-full py-3.5 rounded-lg text-on-primary-container font-bold text-sm tracking-wide uppercase shadow-lg active:scale-[0.98] transition-all duration-150 hover:brightness-110'
+				style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-container))" }}
 			>
-				Reset Password
+				{sending ? "Sending..." : "Send Reset Link"}
 			</button>
 		</form>
 	);

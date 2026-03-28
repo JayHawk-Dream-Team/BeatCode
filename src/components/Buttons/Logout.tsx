@@ -38,7 +38,11 @@ const Logout: React.FC = () => {
 		signOut();
 	};
 	return (
-		<button className='bg-dark-fill-3 py-1.5 px-3 cursor-pointer rounded text-brand-orange' onClick={handleLogout}>
+		<button
+			className='py-1.5 px-3 cursor-pointer rounded transition-colors'
+			style={{ background: 'var(--surface-container)', color: 'var(--secondary)' }}
+			onClick={handleLogout}
+		>
 			<FiLogOut />
 		</button>
 	);

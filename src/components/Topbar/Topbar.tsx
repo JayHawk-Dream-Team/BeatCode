@@ -93,25 +93,31 @@ const Topbar: React.FC<TopbarProps> = ({ problemPage }) => {
 	};
 
 	return (
-		<nav className='relative flex h-[50px] w-full shrink-0 items-center px-5 bg-dark-layer-1 text-dark-gray-7'>
+		<nav className='relative flex h-[50px] w-full shrink-0 items-center px-5' style={{ background: 'var(--surface)', color: 'var(--on-surface)' }}>
 			<div className={`flex w-full items-center justify-between ${!problemPage ? "max-w-[1200px] mx-auto" : ""}`}>
 				{/* Written by Carlos with help from Claude */}
-				<Link href='/' className='flex items-center gap-2 flex-1'>
-					<Image src='/jayhawk-logo.svg' alt='BeatCode' height={36} width={36} />
-					<span className='text-white font-bold text-lg tracking-wide'>BeatCode</span>
-				</Link>
+				<div className='flex items-center gap-6 flex-1'>
+					<Link href='/' className='flex items-center gap-2'>
+						{/* <Image src='/jayhawk-logo.svg' alt='BeatCode' height={36} width={36} /> */}
+						<span className='text-xl font-black tracking-tighter' style={{ color: 'var(--on-surface)' }}>
+                                BEATCODE
+                        </span>
+					</Link>
+				</div>
 
 				{problemPage && (
 					<div className='flex items-center gap-4 flex-1 justify-center'>
 						<div
-							className='flex items-center justify-center rounded bg-dark-fill-3 hover:bg-dark-fill-2 h-8 w-8 cursor-pointer'
+							className='flex items-center justify-center rounded h-8 w-8 cursor-pointer'
 							onClick={() => handleProblemChange(false)}
+							style={{ background: 'var(--surface-container)', color: 'var(--on-surface-variant)' }}
 						>
 							<FaChevronLeft />
 						</div>
 						<Link
 							href='/'
-							className='flex items-center gap-2 font-medium max-w-[170px] text-dark-gray-8 cursor-pointer'
+							className='flex items-center gap-2 font-medium max-w-[170px] cursor-pointer'
+							style={{ color: 'var(--on-surface-variant)' }}
 						>
 							<div>
 								<BsList />
@@ -119,8 +125,9 @@ const Topbar: React.FC<TopbarProps> = ({ problemPage }) => {
 							<p>Problem List</p>
 						</Link>
 						<div
-							className='flex items-center justify-center rounded bg-dark-fill-3 hover:bg-dark-fill-2 h-8 w-8 cursor-pointer'
+							className='flex items-center justify-center rounded h-8 w-8 cursor-pointer'
 							onClick={() => handleProblemChange(true)}
+							style={{ background: 'var(--surface-container)', color: 'var(--on-surface-variant)' }}
 						>
 							<FaChevronRight />
 						</div>
@@ -129,24 +136,19 @@ const Topbar: React.FC<TopbarProps> = ({ problemPage }) => {
 
 				<div className='flex items-center space-x-4 flex-1 justify-end'>
 					{problemPage && matchId && (
-						<div className='bg-red-600 text-white px-3 py-1 rounded text-sm mr-2'>In Match</div>
+						<div style={{ background: 'var(--error)', color: 'var(--on-surface)', padding: '0.25rem 0.75rem', borderRadius: '0.375rem', marginRight: '0.5rem', fontSize: '0.875rem' }}>In Match</div>
 					)}
-					<div>
-						<a
-							href='https://www.buymeacoffee.com/burakorkmezz'
-							target='_blank'
-							rel='noreferrer'
-							className='bg-dark-fill-3 py-1.5 px-3 cursor-pointer rounded text-brand-orange hover:bg-dark-fill-2'
-						>
-							Premium
-						</a>
-					</div>
+					{!problemPage && (
+						<Link href='/problems' className='font-medium' style={{ color: 'var(--on-surface-variant)' }}>
+							Problems
+						</Link>
+					)}
 					{!user && (
 						<Link
 							href='/auth'
 							onClick={() => setAuthModalState((prev) => ({ ...prev, isOpen: true, type: "login" }))}
 						>
-							<button className='bg-dark-fill-3 py-1 px-2 cursor-pointer rounded '>Sign In</button>
+							<button className='py-1 px-2 cursor-pointer rounded' style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-container))', color: 'var(--on-primary-container)' }}>Sign In</button>
 						</Link>
 					)}
 					{user && problemPage && <Timer />}
@@ -154,11 +156,10 @@ const Topbar: React.FC<TopbarProps> = ({ problemPage }) => {
 						<div className='cursor-pointer group relative'>
 							<Image src='/avatar.png' alt='Avatar' width={30} height={30} className='rounded-full' />
 							<div
-								className='absolute top-10 left-2/4 -translate-x-2/4  mx-auto bg-dark-layer-1 text-brand-orange p-2 rounded shadow-lg 
-								z-40 group-hover:scale-100 scale-0 
-								transition-all duration-300 ease-in-out'
+								className='absolute top-10 left-2/4 -translate-x-2/4 mx-auto p-2 rounded shadow-lg z-40'
+								style={{ background: 'var(--surface-container)', color: 'var(--secondary)', transform: 'scale(0)', transition: 'transform 200ms ease-in-out' }}
 							>
-								<p className='text-sm'>{user.email}</p>
+								<p className='text-sm' style={{ color: 'var(--on-surface)' }}>{user.email}</p>
 							</div>
 						</div>
 					)}

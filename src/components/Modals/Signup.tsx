@@ -107,74 +107,64 @@ const Signup: React.FC<SignupProps> = () => {
 	};
 
 	useEffect(() => {
-		if (error) alert(error.message);
+		if (error) toast.error(error.message, { position: "top-center", autoClose: 3000, theme: "dark" });
 	}, [error]);
 
 	return (
 		<form className='space-y-6 px-6 pb-4' onSubmit={handleRegister}>
-			<h3 className='text-xl font-medium text-white'>Register to BeatCode</h3>
+			<h3 className='text-xl font-bold text-on-surface'>Join BeatCode</h3>
 			<div>
-				<label htmlFor='email' className='text-sm font-medium block mb-2 text-gray-300'>
-					Email
+				<label htmlFor='email' className='text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1 block mb-2'>
+					Identity
 				</label>
 				<input
 					onChange={handleChangeInput}
 					type='email'
 					name='email'
 					id='email'
-					className='
-        border-2 outline-none sm:text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5
-        bg-gray-600 border-gray-500 placeholder-gray-400 text-white
-    '
-					placeholder='name@company.com'
+					className='w-full bg-surface-container-highest border-none rounded-lg py-3 px-4 text-on-surface placeholder:text-outline transition-all focus:ring-1 focus:ring-primary/40 focus:bg-surface-container-high'
+					placeholder='email@example.com'
 				/>
 			</div>
 			<div>
-				<label htmlFor='displayName' className='text-sm font-medium block mb-2 text-gray-300'>
+				<label htmlFor='displayName' className='text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1 block mb-2'>
 					Display Name
 				</label>
 				<input
 					onChange={handleChangeInput}
-					type='displayName'
+					type='text'
 					name='displayName'
 					id='displayName'
-					className='
-        border-2 outline-none sm:text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5
-        bg-gray-600 border-gray-500 placeholder-gray-400 text-white
-    '
-					placeholder='John Doe'
+					className='w-full bg-surface-container-highest border-none rounded-lg py-3 px-4 text-on-surface placeholder:text-outline transition-all focus:ring-1 focus:ring-primary/40 focus:bg-surface-container-high'
+					placeholder='Your name'
 				/>
 			</div>
 			<div>
-				<label htmlFor='password' className='text-sm font-medium block mb-2 text-gray-300'>
-					Password
+				<label htmlFor='password' className='text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1 block mb-2'>
+					Protocol
 				</label>
 				<input
 					onChange={handleChangeInput}
 					type='password'
 					name='password'
 					id='password'
-					className='
-        border-2 outline-none sm:text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5
-        bg-gray-600 border-gray-500 placeholder-gray-400 text-white
-    '
-					placeholder='*******'
+					className='w-full bg-surface-container-highest border-none rounded-lg py-3 px-4 text-on-surface placeholder:text-outline transition-all focus:ring-1 focus:ring-primary/40 focus:bg-surface-container-high'
+					placeholder='••••••••'
 				/>
 			</div>
 
 			<button
 				type='submit'
-				className='w-full text-white focus:ring-blue-300 font-medium rounded-lg
-            text-sm px-5 py-2.5 text-center bg-brand-orange hover:bg-brand-orange-s
-        '
+				className='w-full py-3.5 rounded-lg text-on-primary-container font-bold text-sm tracking-wide uppercase shadow-lg active:scale-[0.98] transition-all duration-150 hover:brightness-110'
+				style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-container))" }}
 			>
-				{loading ? "Registering..." : "Register"}
+				{loading ? "Creating Account..." : "Create Account"}
 			</button>
 
-			<div className='text-sm font-medium text-gray-300'>
-				Already have an account?{" "}
-				<a href='#' className='text-blue-700 hover:underline' onClick={handleClick}>
-					Log In
+			<div className='text-xs font-bold uppercase tracking-widest text-on-surface-variant'>
+				Already Have Account?{" "}
+				<a href='#' className='text-primary font-bold hover:underline' onClick={handleClick}>
+					Sign In
 				</a>
 			</div>
 		</form>

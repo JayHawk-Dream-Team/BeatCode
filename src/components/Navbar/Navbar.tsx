@@ -37,18 +37,16 @@ const Navbar: React.FC<NavbarProps> = () => {
 		setAuthModalState((prev) => ({ ...prev, isOpen: true }));
 	};
 	return (
-		<div className='flex items-center justify-between sm:px-12 px-2 md:px-24'>
+		<div className='flex items-center justify-between sm:px-12 px-2 md:px-24' style={{ background: 'var(--surface)', color: 'var(--on-surface)' }}>
 			<Link href='/' className='flex items-center gap-3 h-20'>
-				<Image src='/jayhawk-logo.svg' alt='BeatCode' height={64} width={64} />
-				<span className='text-white font-bold text-2xl tracking-wide'>BeatCode</span>
+				<Image src='/beatcode_logo.png' alt='BeatCode' height={64} width={64} />
+				<span style={{ color: 'var(--on-surface)', fontWeight: 700, fontSize: '1.25rem', letterSpacing: '0.02em' }}>BeatCode</span>
 			</Link>
 			<div className='flex items-center'>
 				<button
-					className='bg-brand-orange text-white px-2 py-1 sm:px-4 rounded-md text-sm font-medium
-                hover:text-brand-orange hover:bg-white hover:border-2 hover:border-brand-orange border-2 border-transparent
-                transition duration-300 ease-in-out
-                '
+					className='px-2 py-1 sm:px-4 rounded-md text-sm font-medium transition-colors'
 					onClick={handleClick}
+					style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-container))', color: 'var(--on-primary-container)', border: 'none' }}
 				>
 					Sign In
 				</button>

@@ -329,6 +329,7 @@ function useGetProblems(setLoadingProblems: React.Dispatch<React.SetStateAction<
 					docs = legacySnapshot.docs;
 				}
 
+				// eslint-disable-next-line react-hooks/exhaustive-deps
 				const fetched: DBProblem[] = docs.map((docSnap, idx) => normalizeProblem(docSnap, idx + 1));
 
 				if (fetched.length === 0) {

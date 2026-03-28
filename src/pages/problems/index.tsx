@@ -23,12 +23,12 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import ProblemsTable from "@/components/ProblemsTable/ProblemsTable";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/firebase/firebase";
 import { useSetRecoilState } from "recoil";
 import { authModalState } from "@/atoms/authModalAtom";
-import Image from "next/image";
 import { GiCrossedSwords } from "react-icons/gi";
 
 export default function ProblemsLibrary() {
@@ -78,11 +78,11 @@ export default function ProblemsLibrary() {
 				<nav className='flex items-center justify-between px-8 py-4 w-full max-w-none'>
 					{/* Left: Logo and Nav Links */}
 					<div className='flex items-center gap-12'>
-                        <a href='/'>
+                        <Link href='/'>
                             <span className='text-xl font-black tracking-tighter' style={{ color: 'var(--on-surface)' }}>
                                 BEATCODE
                             </span>
-                        </a>
+                        </Link>
 						<div className='hidden md:flex items-center gap-8 text-sm font-medium'>
 							<Link
 								href='/problems'
@@ -174,10 +174,11 @@ export default function ProblemsLibrary() {
 					<section className='grid grid-cols-1 md:grid-cols-3 gap-6'>
 						{/* Hero Image */}
 						<div className='md:col-span-2 relative h-48 rounded-xl overflow-hidden group'>
-							<img
-								className='absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105'
-								alt='competitive coding arena'
-								src='https://images.unsplash.com/photo-1517694712202-14dd9538aa97?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80'
+						<Image
+							className='absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105'
+							alt='competitive coding arena'
+							src='https://images.unsplash.com/photo-1517694712202-14dd9538aa97?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80'
+							fill
 							/>
 							<div className='absolute inset-0 flex flex-col justify-center px-10' style={{ background: 'linear-gradient(to right, var(--surface), transparent)' }}>
 								<h2 className='text-3xl font-black tracking-tight mb-2' style={{ color: 'var(--on-surface)' }}>

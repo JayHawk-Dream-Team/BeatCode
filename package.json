@@ -35,11 +35,11 @@
     "tailwindcss": "^3.2.7"
   },
   "scripts": {
-    "dev:bandage": "powershell -ExecutionPolicy Bypass -File ./scripts/restart-dev.ps1",
-    "dev": "powershell -ExecutionPolicy Bypass -File \"./scripts/dev-start.ps1\"",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "dev:safe": "powershell -ExecutionPolicy Bypass -File \"./scripts/dev-start.ps1\""
+    "dev:windows": "powershell -ExecutionPolicy Bypass -File \"./scripts/dev-start.ps1\"",
+    "dev:bandage": "powershell -ExecutionPolicy Bypass -File ./scripts/restart-dev.ps1"
   }
 }

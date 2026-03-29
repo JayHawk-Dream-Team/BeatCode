@@ -1,4 +1,4 @@
-﻿/**
+/**
  * prologue comment
  * Name of code artifact: Playground.tsx
  * Brief description: Main coding playground handling editor state, judge run/submit, multiplayer HUD, penalties, and match-end redirects.
@@ -40,7 +40,10 @@ import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { cpp } from "@codemirror/lang-cpp";
 import EditorFooter from "./EditorFooter";
+import ComplexityPanel from "./ComplexityPanel";
+import AIHelpPanel from "./AIHelpPanel";
 import { Problem } from "@/utils/types/problem";
+import type { ComplexityAnalysis, AIHelpTier, AIHelpMessage } from "@/utils/types/ai";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, firestore } from "@/firebase/firebase";
 import { toast } from "react-toastify";
@@ -91,6 +94,21 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	const [opponentPenaltyMs, setOpponentPenaltyMs] = useState<number>(0);
 	const [opponentName, setOpponentName] = useState<string>("Opponent");
 
+	// ─── Big-O Complexity Analysis state ─────────────────────────────────
+	// Written by Carlos with help from Claude
+	const [complexityAnalysis, setComplexityAnalysis] = useState<ComplexityAnalysis | null>(null);
+	const [complexityLoading, setComplexityLoading] = useState(false);
+	const [complexityError, setComplexityError] = useState<string | null>(null);
+	const [activeBottomTab, setActiveBottomTab] = useState<"testcases" | "complexity">("testcases");
+
+	// ─── AI Help state ────────────────────────────────────────────────────
+	const [aiHelpOpen, setAiHelpOpen] = useState(false);
+	const [aiHelpMessages, setAiHelpMessages] = useState<AIHelpMessage[]>([]);
+	const [aiHelpLoading, setAiHelpLoading] = useState(false);
+	const [aiHelpError, setAiHelpError] = useState<string | null>(null);
+	const [hasFailedRun, setHasFailedRun] = useState(false);
+	const [hasFailedSubmit, setHasFailedSubmit] = useState(false);
+
 	const [fontSize, setFontSize] = useLocalStorage("beatcode-fontSize", "16px");
 
 	const [settings, setSettings] = useState<ISettings>({
@@ -125,6 +143,12 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 		fetchTestcases();
 	}, [problem.id]);
 
+	// Prefer Firestore testcases if available, else fallback to problem.examples
+	const testCases = (firestoreTestcases.length > 0
+		? firestoreTestcases.map(tc => ({ input: tc.input || "", expectedOutput: tc.expectedOutput || "" }))
+		: problem.examples.map((example) => ({ input: example.inputText || "", expectedOutput: example.outputText || "" }))
+	);
+
 	const notifyMatchSubmission = useCallback(
 		async (result: "accepted" | "failed", details: any) => {
 			if (!matchId || !user) return;
@@ -143,6 +167,98 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 			}
 		},
 		[matchId, user]
+	);
+
+	// ─── Close AI help panel when entering multiplayer ────────────────────
+	// Written by Carlos with help from Claude
+	useEffect(() => {
+		if (matchId) setAiHelpOpen(false);
+	}, [matchId]);
+
+	// ─── Big-O Complexity Analysis ────────────────────────────────────────
+	// Written by Carlos with help from Claude
+	const fetchComplexityAnalysis = useCallback(
+		async (code: string, lang: string) => {
+			if (complexityLoading) return; // debounce
+			setComplexityLoading(true);
+			setComplexityError(null);
+			try {
+				const resp = await fetch("/api/ai/complexity", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						code,
+						language: lang,
+						problemTitle: problem.title,
+						problemStatement: problem.problemStatement,
+					}),
+				});
+				const data = await resp.json();
+				if (!resp.ok) throw new Error(data.error || "Analysis failed");
+				setComplexityAnalysis(data.analysis);
+				setActiveBottomTab("complexity");
+			} catch (e: any) {
+				setComplexityError(e.message);
+			} finally {
+				setComplexityLoading(false);
+			}
+		},
+		[complexityLoading, problem.title, problem.problemStatement]
+	);
+
+	// ─── AI Help request handler ──────────────────────────────────────────
+	// Written by Carlos with help from Claude
+	const handleRequestAIHelp = useCallback(
+		async (tier: AIHelpTier, followUp?: string) => {
+			setAiHelpLoading(true);
+			setAiHelpError(null);
+
+			const tierLabels: Record<AIHelpTier, string> = {
+				hint: "Give me a hint",
+				guide: "Guide me through my issue",
+				explain: "Explain the full solution",
+			};
+			const userMsg: AIHelpMessage = {
+				role: "user",
+				content: followUp || tierLabels[tier],
+				tier,
+				timestamp: Date.now(),
+			};
+			const updatedHistory = [...aiHelpMessages, userMsg];
+			setAiHelpMessages(updatedHistory);
+
+			try {
+				const resp = await fetch("/api/ai/help", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						code: userCode,
+						language,
+						problemTitle: problem.title,
+						problemStatement: problem.problemStatement,
+						testCases,
+						tier,
+						conversationHistory: updatedHistory,
+						followUpQuestion: followUp,
+					}),
+				});
+				const data = await resp.json();
+				if (!resp.ok) throw new Error(data.error || "AI help failed");
+
+				const assistantMsg: AIHelpMessage = {
+					role: "assistant",
+					content: data.message,
+					tier,
+					timestamp: Date.now(),
+				};
+				setAiHelpMessages((prev) => [...prev, assistantMsg]);
+			} catch (e: any) {
+				setAiHelpError(e.message);
+			} finally {
+				setAiHelpLoading(false);
+			}
+		},
+		[aiHelpMessages, userCode, language, problem.title, problem.problemStatement, testCases]
 	);
 
 	useEffect(() => {
@@ -231,11 +347,6 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	}, [language]);
 
 	const codeStorageKey = `code-${pid}-${language}`;
-	// Prefer Firestore testcases if available, else fallback to problem.examples
-	const testCases = (firestoreTestcases.length > 0
-		? firestoreTestcases.map(tc => ({ input: tc.input || "", expectedOutput: tc.expectedOutput || "" }))
-		: problem.examples.map((example) => ({ input: example.inputText || "", expectedOutput: example.outputText || "" }))
-	);
 
 	/**
 	 * Artifact:             handleSubmit
@@ -245,16 +356,16 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	 * Preconditions:        User must be authenticated. problem.starterFunctionName and
 	 *                       problem.handlerFunction must be valid.
 	 * Acceptable Input:     No parameters; reads userCode and problem from closure.
-	 * Unacceptable Input:   N/A â€” called only by button click.
+	 * Unacceptable Input:   N/A — called only by button click.
 	 *
 	 * Postconditions:       On success: Firestore solvedProblems updated, confetti triggered.
 	 *                       On failure: appropriate toast error shown to the user.
-	 * Return Values:        Promise<void> â€” no return value; effects are via state and Firestore.
+	 * Return Values:        Promise<void> — no return value; effects are via state and Firestore.
 	 *
 	 * Error/Exception Conditions:
-	 *                       AssertionError â€” caught, toast "One or more test cases failed".
-	 *                       Any other error â€” caught, toast with error.message.
-	 *                       Not authenticated â€” early return with toast before execution.
+	 *                       AssertionError — caught, toast "One or more test cases failed".
+	 *                       Any other error — caught, toast with error.message.
+	 *                       Not authenticated — early return with toast before execution.
 	 * Side Effects:         May write to Firestore. Shows toast. Calls setSuccess / setSolved.
 	 * Invariants:           userCode is sliced from starterFunctionName forward before eval.
 	 * Known Faults:         No sandbox around new Function(); user code runs with full access.
@@ -296,7 +407,7 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 				if (data.status === "accepted") {
 					const passed = (data.testResults ?? []).filter((r: any) => r.passed).length;
 					const total = (data.testResults ?? []).length;
-					toast.success(`All ${total} test case${total !== 1 ? "s" : ""} passed! âœ“`, { position: "top-center", autoClose: 2500, theme: "dark" });
+					toast.success(`All ${total} test case${total !== 1 ? "s" : ""} passed! ✓`, { position: "top-center", autoClose: 2500, theme: "dark" });
 					// Collect and expose any printed stdout from the judge results
 					const printed = (data.testResults ?? []).map((r: any) => r.stdout).filter(Boolean).join("\n").trim();
 					setRunStdout(printed || undefined);
@@ -309,12 +420,13 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 						: failedTest
 						? `Expected ${JSON.stringify(failedTest.expected)}, got ${JSON.stringify(failedTest.actual)}`
 						: data.message || data.status;
-					toast.error(`${passed}/${total} passed â€” Test ${(failedTest?.testIndex ?? 0) + 1}: ${detail}`, {
+					toast.error(`${passed}/${total} passed — Test ${(failedTest?.testIndex ?? 0) + 1}: ${detail}`, {
 						position: "top-center",
 						autoClose: 4000,
 						theme: "dark",
 					});
 					setRunStdout(undefined);
+					setHasFailedRun(true);
 				}
 			} else {
 				// Legacy response: exitCode-based
@@ -326,10 +438,12 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 						autoClose: 3500,
 						theme: "dark",
 					});
+					setHasFailedRun(true);
 				}
 			}
 		} catch (error: any) {
 			toast.error(error.message || "Unable to run code", { position: "top-center", autoClose: 3000, theme: "dark" });
+			setHasFailedRun(true);
 		} finally {
 			setRunning(false);
 		}
@@ -400,6 +514,12 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 
 				// If this submission is for a match, notify the match document
 				await notifyMatchSubmission("accepted", data);
+
+				// Trigger Big-O complexity analysis (skip in multiplayer)
+				// Written by Carlos with help from Claude
+				if (!matchId) {
+					fetchComplexityAnalysis(userCode, language);
+				}
 			} else {
 				const failedTest = (data.testResults ?? []).find((r: any) => !r.passed);
 				const passed = (data.testResults ?? []).filter((r: any) => r.passed).length;
@@ -411,10 +531,11 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 					: data.message || data.status || "One or more test cases failed";
 				toast.error(
 					total > 0
-						? `${passed}/${total} passed â€” Test ${(failedTest?.testIndex ?? 0) + 1}: ${detail}`
+						? `${passed}/${total} passed — Test ${(failedTest?.testIndex ?? 0) + 1}: ${detail}`
 						: detail,
 					{ position: "top-center", autoClose: 4000, theme: "dark" }
 				);
+				setHasFailedSubmit(true);
 				await notifyMatchSubmission("failed", data);
 			}
 		} catch (error: any) {
@@ -423,6 +544,7 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 				autoClose: 3000,
 				theme: "dark",
 			});
+			setHasFailedSubmit(true);
 		} finally {
 			setSubmitting(false);
 		}
@@ -481,8 +603,8 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	 *                       localStorage so drafts survive page refreshes.
 	 *
 	 * Preconditions:        pid must be available from the router query.
-	 * Acceptable Input:     value â€” the full current string content of the CodeMirror editor.
-	 * Unacceptable Input:   N/A â€” always called by CodeMirror with a valid string.
+	 * Acceptable Input:     value — the full current string content of the CodeMirror editor.
+	 * Unacceptable Input:   N/A — always called by CodeMirror with a valid string.
 	 *
 	 * Postconditions:       userCode state and localStorage["code-{pid}"] both reflect value.
 	 * Return Values:        void.
@@ -500,6 +622,15 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 			localStorage.setItem(codeStorageKey, JSON.stringify(value));
 		}
 	};
+
+	// ─── AI Help gating logic ─────────────────────────────────────────────
+	// Written by Carlos with help from Claude
+	const codeModified = userCode.trim() !== getDefaultStarterCode(language).trim();
+	const hintAvailable = codeModified && !matchId;
+	const guideAvailable = (hasFailedRun || hasFailedSubmit) && !matchId;
+	const explainAvailable = hasFailedSubmit && !matchId;
+
+	const showComplexityTab = complexityAnalysis !== null || complexityLoading || complexityError !== null;
 
 	return (
 		<div className='flex flex-col bg-dark-layer-1 relative overflow-x-hidden'>
@@ -554,71 +685,116 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 						style={{ fontSize: settings.fontSize }}
 					/>
 				</div>
-				<div className='w-full px-5 overflow-auto'>
-					{/* testcase heading */}
+				<div className='w-full px-5 overflow-auto pb-[50px]'>
+					{/* Tab bar: Testcases + Complexity (when available) */}
 					<div className='flex h-10 items-center space-x-6'>
-						<div className='relative flex h-full flex-col justify-center cursor-pointer'>
-							<div className='text-sm font-medium leading-5 text-white'>Testcases</div>
-							<hr className='absolute bottom-0 h-0.5 w-full rounded-full border-none bg-white' />
+						<div
+							className='relative flex h-full flex-col justify-center cursor-pointer'
+							onClick={() => setActiveBottomTab("testcases")}
+						>
+							<div className={`text-sm font-medium leading-5 ${activeBottomTab === "testcases" ? "text-white" : "text-gray-500"}`}>
+								Testcases
+							</div>
+							{activeBottomTab === "testcases" && (
+								<hr className='absolute bottom-0 h-0.5 w-full rounded-full border-none bg-white' />
+							)}
 						</div>
+						{showComplexityTab && (
+							<div
+								className='relative flex h-full flex-col justify-center cursor-pointer'
+								onClick={() => setActiveBottomTab("complexity")}
+							>
+								<div className={`text-sm font-medium leading-5 ${activeBottomTab === "complexity" ? "text-white" : "text-gray-500"}`}>
+									Complexity
+								</div>
+								{activeBottomTab === "complexity" && (
+									<hr className='absolute bottom-0 h-0.5 w-full rounded-full border-none bg-white' />
+								)}
+							</div>
+						)}
 					</div>
 
-					{/* Prefer Firestore testcases if available, else fallback to problem.examples */}
-					{loadingTestcases ? (
-						<p className='text-sm text-gray-400 mt-4'>Loading test cases...</p>
-					) : testCases.length > 0 ? (
+					{/* Tab content */}
+					{activeBottomTab === "testcases" ? (
 						<>
-							<div className='flex'>
-								{testCases.map((tc, index) => (
-									<div
-										className='mr-2 items-start mt-2 '
-										key={index}
-										onClick={() => setActiveTestCaseId(index)}
-									>
-										<div
-											className={`font-medium items-center transition-all focus:outline-none inline-flex bg-dark-fill-3 hover:bg-dark-fill-2 relative rounded-lg px-4 py-1 cursor-pointer whitespace-nowrap
-												${activeTestCaseId === index ? "text-white" : "text-gray-500"}
-											`}
-										>
-											Test Case {index + 1}
+							{/* Prefer Firestore testcases if available, else fallback to problem.examples */}
+							{loadingTestcases ? (
+								<p className='text-sm text-gray-400 mt-4'>Loading test cases...</p>
+							) : testCases.length > 0 ? (
+								<>
+									<div className='flex'>
+										{testCases.map((tc, index) => (
+											<div
+												className='mr-2 items-start mt-2 '
+												key={index}
+												onClick={() => setActiveTestCaseId(index)}
+											>
+												<div
+													className={`font-medium items-center transition-all focus:outline-none inline-flex bg-dark-fill-3 hover:bg-dark-fill-2 relative rounded-lg px-4 py-1 cursor-pointer whitespace-nowrap
+														${activeTestCaseId === index ? "text-white" : "text-gray-500"}
+													`}
+												>
+													Test Case {index + 1}
+												</div>
+											</div>
+										))}
+									</div>
+									<div className='font-semibold my-4'>
+										<p className='text-sm font-medium mt-4 text-white'>Input:</p>
+										<div className='w-full cursor-text rounded-lg border px-3 py-[10px] bg-dark-fill-3 border-transparent text-white mt-2'>
+											{testCases[activeTestCaseId]?.input}
+										</div>
+										<p className='text-sm font-medium mt-4 text-white'>Output:</p>
+										<div className='w-full cursor-text rounded-lg border px-3 py-[10px] bg-dark-fill-3 border-transparent text-white mt-2'>
+											{testCases[activeTestCaseId]?.expectedOutput}
 										</div>
 									</div>
-								))}
-							</div>
-							<div className='font-semibold my-4'>
-								<p className='text-sm font-medium mt-4 text-white'>Input:</p>
-								<div className='w-full cursor-text rounded-lg border px-3 py-[10px] bg-dark-fill-3 border-transparent text-white mt-2'>
-									{testCases[activeTestCaseId]?.input}
+								</>
+							) : (
+								<p className='text-sm text-gray-400 mt-4'>No test cases available for this problem.</p>
+							)}
+
+							{/* Captured stdout (printed output) from the last run */}
+							{runStdout ? (
+								<div className='mt-4'>
+									<p className='text-sm font-medium text-white'>Stdout (prints):</p>
+									<pre className='whitespace-pre-wrap bg-dark-fill-3 rounded-lg p-3 text-white mt-2 overflow-auto'>{runStdout}</pre>
 								</div>
-								<p className='text-sm font-medium mt-4 text-white'>Output:</p>
-								<div className='w-full cursor-text rounded-lg border px-3 py-[10px] bg-dark-fill-3 border-transparent text-white mt-2'>
-									{testCases[activeTestCaseId]?.expectedOutput}
-								</div>
-							</div>
+							) : null}
 						</>
 					) : (
-						<p className='text-sm text-gray-400 mt-4'>No test cases available for this problem.</p>
+						<ComplexityPanel
+							analysis={complexityAnalysis}
+							loading={complexityLoading}
+							error={complexityError}
+						/>
 					)}
-
-				{/* Captured stdout (printed output) from the last run */}
-				{runStdout ? (
-					<div className='mt-4'>
-						<p className='text-sm font-medium text-white'>Stdout (prints):</p>
-						<pre className='whitespace-pre-wrap bg-dark-fill-3 rounded-lg p-3 text-white mt-2 overflow-auto'>{runStdout}</pre>
-					</div>
-				) : null}
 				</div>
 			</Split>
+
+			{/* AI Help overlay panel */}
+			<AIHelpPanel
+				isOpen={aiHelpOpen}
+				onClose={() => setAiHelpOpen(false)}
+				messages={aiHelpMessages}
+				onRequestHelp={handleRequestAIHelp}
+				loading={aiHelpLoading}
+				error={aiHelpError}
+				hintAvailable={hintAvailable}
+				guideAvailable={guideAvailable}
+				explainAvailable={explainAvailable}
+			/>
+
 			<EditorFooter
 				handleRun={handleRun}
 				handleSubmit={handleSubmit}
 				running={running}
 				submitting={submitting}
 				isMultiplayer={Boolean(matchId)}
+				onToggleAIHelp={() => setAiHelpOpen((prev) => !prev)}
+				aiHelpDisabled={Boolean(matchId)}
 			/>
 		</div>
 	);
 };
 export default Playground;
-
-

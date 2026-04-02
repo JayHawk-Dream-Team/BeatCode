@@ -44,6 +44,7 @@ import { AiFillLike, AiFillDislike, AiOutlineLoading3Quarters, AiFillStar } from
 import { BsCheck2Circle } from "react-icons/bs";
 import { TiStarOutline } from "react-icons/ti";
 import { toast } from "react-toastify";
+import { useRouter } from "next/router";
 
 type ProblemDescriptionProps = {
 	problem: Problem;
@@ -51,10 +52,20 @@ type ProblemDescriptionProps = {
 };
 
 const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solved }) => {
+	const router = useRouter();
+	const isMultiplayer = Boolean(router.query.matchId);
 	const [user] = useAuthState(auth);
 	const { currentProblem, loading, problemDifficultyClass, setCurrentProblem } = useGetCurrentProblem(problem.id);
 	const { liked, disliked, solved, setData, starred } = useGetUsersDataOnProblem(problem.id);
 	const [updating, setUpdating] = useState(false);
+
+	const leetcodeLink = currentProblem?.link || (currentProblem as any)?.leetcodeLink || undefined;
+	const youtubeRaw = currentProblem?.videoId || (currentProblem as any)?.yt_url || (currentProblem as any)?.videoURL || undefined;
+	const youtubeLink = youtubeRaw
+		? String(youtubeRaw).startsWith("http")
+			? String(youtubeRaw)
+			: `https://www.youtube.com/watch?v=${youtubeRaw}`
+		: undefined;
 
 	/**
 	 * Artifact:             returnUserDataAndProblemData
@@ -344,6 +355,32 @@ const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solve
 						<div className='text-white text-sm'>
 							<div dangerouslySetInnerHTML={{ __html: problem.problemStatement }} />
 						</div>
+
+						{/* Single-player quick links */}
+						{!isMultiplayer && (leetcodeLink || youtubeLink) ? (
+							<div className='mt-4 flex items-center gap-3 text-sm'>
+								{leetcodeLink ? (
+									<a
+										href={leetcodeLink}
+										target='_blank'
+										rel='noreferrer'
+										className='inline-flex items-center rounded-md px-2 py-1 bg-dark-fill-3 hover:bg-dark-fill-2 text-blue-300'
+									>
+										LeetCode &#8599;
+									</a>
+								) : null}
+								{youtubeLink ? (
+									<a
+										href={youtubeLink}
+										target='_blank'
+										rel='noreferrer'
+										className='inline-flex items-center rounded-md px-2 py-1 bg-dark-fill-3 hover:bg-dark-fill-2 text-red-300'
+									>
+										YouTube Video
+									</a>
+								) : null}
+							</div>
+						) : null}
 
 						{/* Examples */}
 						<div className='mt-4'>

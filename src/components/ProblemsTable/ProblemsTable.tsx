@@ -31,6 +31,7 @@
  */
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
+import { AiFillYoutube } from "react-icons/ai";
 import { useRouter } from "next/router";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { auth, firestore } from "@/firebase/firebase";
@@ -165,13 +166,39 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems, selec
 							{/* Title Column */}
 							<td className='px-6 py-5'>
 								<div className='flex flex-col'>
-									<Link
-										href={`/problems/${problem.id}`}
-										className='text-base font-bold transition-colors group-hover:text-primary'
-										style={{ color: 'var(--on-surface)' }}
-									>
-										{problem.title}
-									</Link>
+									<div className='flex items-center gap-2'>
+										<Link
+											href={`/problems/${problem.id}`}
+											className='text-base font-bold transition-colors group-hover:text-primary'
+											style={{ color: 'var(--on-surface)' }}
+										>
+											{problem.title}
+										</Link>
+										{problem.link ? (
+											<a
+												href={problem.link}
+												target='_blank'
+												rel='noreferrer'
+												title='Open on LeetCode'
+												className='inline-flex items-center text-sm font-bold'
+												style={{ color: 'var(--primary)' }}
+											>
+												&#8599;
+											</a>
+										) : null}
+										{problem.videoId ? (
+											<a
+												href={`https://www.youtube.com/watch?v=${problem.videoId}`}
+												target='_blank'
+												rel='noreferrer'
+												title='Watch solution video'
+												className='inline-flex items-center'
+												style={{ color: '#ef4444' }}
+											>
+												<AiFillYoutube size={18} />
+											</a>
+										) : null}
+									</div>
 									<span className='text-xs mt-1' style={{ color: 'var(--on-surface-variant)' }}>
 										{problem.category}
 									</span>

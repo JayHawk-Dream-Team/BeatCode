@@ -35,6 +35,25 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { JudgeResponse, JudgeTestResult } from "@/utils/types/judge";
 import { evaluateRunResult, buildJudgeResponse } from "@/utils/judgeHelpers";
 
+const JUDGE_REQUEST_TIMEOUT_MS = 15000;
+
+async function postJsonWithTimeout(url: string, body: Record<string, any>, timeoutMs = JUDGE_REQUEST_TIMEOUT_MS) {
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), timeoutMs);
+	try {
+		const resp = await fetch(url, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(body),
+			signal: controller.signal,
+		});
+		const data = await resp.json();
+		return { resp, data };
+	} finally {
+		clearTimeout(timer);
+	}
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
 	if (req.method !== "POST") {
 		return res.status(405).json({ error: "Method not allowed" });
@@ -59,28 +78,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	try {
 		if (metadata && metadata.name) {
 
-			// Run all test cases in parallel using /run + driver scripts
 			const base = judgeUrl.replace(/\/$/, "");
-			const results: JudgeTestResult[] = await Promise.all(
-				metadata.testCases.map(async (tc: { args: any[]; expected: any }, idx: number) => {
-					const requestBody: Record<string, any> = {
-						language,
-						code,
-						functionName: metadata.name,
-						args: tc.args,
-					...(language === "cpp" && Array.isArray(metadata.cppArgTypes) ? { argTypes: metadata.cppArgTypes } : {}),
-						timeoutMs: 5000,
-					};
+			const testCases = metadata.testCases as { args: any[]; expected: any }[];
 
-					const resp = await fetch(`${base}/run`, {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify(requestBody),
-					});
-					const runData = await resp.json();
-					return evaluateRunResult(runData, tc.expected, idx);
-				})
-			);
+			const buildRequestBody = (tc: { args: any[]; expected: any }): Record<string, any> => ({
+				language,
+				code,
+				functionName: metadata.name,
+				args: tc.args,
+				...(language === "cpp" && Array.isArray(metadata.cppArgTypes) ? { argTypes: metadata.cppArgTypes } : {}),
+				timeoutMs: 5000,
+			});
+
+			let results: JudgeTestResult[] = [];
+
+			// C++ compiles on each /run and can saturate small servers under Promise.all fan-out.
+			// Keep C++ submissions sequential to avoid hanging submits.
+			if (language === "cpp") {
+				for (let idx = 0; idx < testCases.length; idx += 1) {
+					const tc = testCases[idx];
+					const { data } = await postJsonWithTimeout(`${base}/run`, buildRequestBody(tc));
+					results.push(evaluateRunResult(data, tc.expected, idx));
+				}
+			} else {
+				results = await Promise.all(
+					testCases.map(async (tc, idx) => {
+						const { data } = await postJsonWithTimeout(`${base}/run`, buildRequestBody(tc));
+						return evaluateRunResult(data, tc.expected, idx);
+					})
+				);
+			}
 
 			return res.status(200).json(buildJudgeResponse(results));
 		} else {

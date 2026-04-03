@@ -30,7 +30,9 @@
  * Any known faults:
  *   - High-frequency polling can produce repeated network traffic on unstable connections.
  */
+
 import { useState, useEffect, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { collection, getDocs } from "firebase/firestore";
 import PreferenceNav from "./PreferenceNav/PreferenceNav";
 import Split from "react-split";
@@ -50,6 +52,9 @@ import { toast } from "react-toastify";
 import { useRouter } from "next/router";
 import { arrayUnion, doc, updateDoc } from "firebase/firestore";
 import useLocalStorage from "@/hooks/useLocalStorage";
+
+// Dynamically import Chat to avoid SSR issues
+const Chat = dynamic(() => import("../Chat/Chat"), { ssr: false });
 
 type PlaygroundProps = {
 	problem: Problem;
@@ -76,6 +81,10 @@ function formatMsAsClock(ms: number): string {
 }
 
 const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved, matchId }) => {
+	// Multiplayer chat state (must be inside component)
+	const [chatOpen, setChatOpen] = useState(false);
+	const [hasUnread, setHasUnread] = useState(false);
+	const [selfName, setSelfName] = useState<string>("You");
 	const [activeTestCaseId, setActiveTestCaseId] = useState<number>(0);
 	const [userCode, setUserCode] = useState<string>(problem.starterCode);
 	const [storedLanguage, setStoredLanguage] = useLocalStorage("beatcode-language", "javascript");
@@ -126,6 +135,21 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	// Firestore testcases
 	const [firestoreTestcases, setFirestoreTestcases] = useState<any[]>([]);
 	const [loadingTestcases, setLoadingTestcases] = useState(true);
+
+
+	// Stable callback so Chat's Firestore subscription doesn't rebuild on every poll cycle
+	const handleNewMessage = useCallback(() => {
+		setChatOpen((open) => {
+			if (!open) setHasUnread(true);
+			return open;
+		});
+	}, []);
+
+	// Assign self name if not present (top-level effect)
+	useEffect(() => {
+		if (!matchId) return;
+		if (user && !selfName) setSelfName("You");
+	}, [matchId, user, selfName]);
 
 	useEffect(() => {
 		async function fetchTestcases() {
@@ -634,15 +658,43 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 
 	return (
 		<div className='flex flex-col bg-dark-layer-1 relative overflow-x-hidden'>
-			<PreferenceNav
-				settings={settings}
-				setSettings={setSettings}
-				language={language}
-				setLanguage={(next) => setStoredLanguage(next)}
-				judgeStatus={judgeStatus}
-				checkingJudge={checkingJudge}
-				onCheckJudge={checkJudgeHealth}
-			/>
+			{/* Chat Panel (multiplayer only) */}
+						{matchId && user && (
+							<Chat
+								matchId={matchId}
+								opponentName={opponentName}
+								selfName={selfName}
+								isOpen={chatOpen}
+								onClose={() => setChatOpen(false)}
+								onNewMessage={handleNewMessage}
+							/>
+						)}
+			 <PreferenceNav
+					 settings={settings}
+					 setSettings={setSettings}
+					 language={language}
+					 setLanguage={(next) => setStoredLanguage(next)}
+					 judgeStatus={judgeStatus}
+					 checkingJudge={checkingJudge}
+					 onCheckJudge={checkJudgeHealth}
+					 chatButton={matchId && user ? (
+						 <button
+							 className={`ml-2 px-3 py-1.5 rounded bg-dark-fill-3 hover:bg-dark-fill-2 text-xs font-medium relative ${hasUnread ? "text-red-500" : "text-white"}`}
+							 onClick={() => {
+								 setChatOpen((open) => {
+									 if (!open) setHasUnread(false); // clear unread when opening chat
+									 return !open;
+								 });
+							 }}
+							 aria-label="Toggle chat"
+						 >
+							 Chat
+							 {hasUnread && (
+								 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+							 )}
+						 </button>
+					 ) : null}
+				 />
 			{matchId && user ? (
 				<div className='px-4 py-2 border-b border-dark-fill-3 bg-dark-layer-2 text-xs text-gray-200'>
 					<div className='flex flex-wrap items-center gap-4'>

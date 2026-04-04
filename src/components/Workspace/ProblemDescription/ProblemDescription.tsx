@@ -33,6 +33,7 @@
  *                       content must come only from trusted local TS files, never user input.
  */
 
+import Image from "next/image";
 import CircleSkeleton from "@/components/Skeletons/CircleSkeleton";
 import RectangleSkeleton from "@/components/Skeletons/RectangleSkeleton";
 import { auth, firestore } from "@/firebase/firebase";
@@ -283,10 +284,10 @@ const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solve
 	};
 
 	return (
-		<div className='bg-dark-layer-1'>
+		<div style={{ background: "var(--surface)" }}>
 			{/* TAB */}
-			<div className='flex h-11 w-full items-center pt-2 bg-dark-layer-2 text-white overflow-x-hidden'>
-				<div className={"bg-dark-layer-1 rounded-t-[5px] px-5 py-[10px] text-xs cursor-pointer"}>
+			<div className='flex h-11 w-full items-center pt-2 overflow-x-hidden' style={{ background: "var(--surface-container)", borderBottom: "1px solid rgba(70, 69, 84, 0.15)" }}>
+				<div className='rounded-t-lg px-5 py-[10px] text-xs font-bold uppercase tracking-widest cursor-pointer text-on-surface' style={{ background: "var(--surface)" }}>
 					Description
 				</div>
 			</div>
@@ -296,7 +297,7 @@ const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solve
 					{/* Problem heading */}
 					<div className='w-full'>
 						<div className='flex space-x-4'>
-							<div className='flex-1 mr-2 text-lg text-white font-medium'>{problem?.title}</div>
+							<div className='flex-1 mr-2 text-lg text-on-surface font-bold'>{problem?.title}</div>
 						</div>
 						{!loading && currentProblem && (
 							<div className='flex items-center mt-3'>
@@ -311,30 +312,33 @@ const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solve
 									</div>
 								)}
 								<div
-									className='flex items-center cursor-pointer hover:bg-dark-fill-3 space-x-1 rounded p-[3px]  ml-4 text-lg transition-colors duration-200 text-dark-gray-6'
+									className='flex items-center cursor-pointer space-x-1 rounded p-[3px] ml-4 text-lg transition-all duration-200 hover:bg-surface-container'
+									style={{ color: liked ? "var(--primary)" : "var(--on-surface-variant)" }}
 									onClick={handleLike}
 								>
-									{liked && !updating && <AiFillLike className='text-dark-blue-s' />}
+									{liked && !updating && <AiFillLike />}
 									{!liked && !updating && <AiFillLike />}
 									{updating && <AiOutlineLoading3Quarters className='animate-spin' />}
 
 									<span className='text-xs'>{currentProblem.likes}</span>
 								</div>
 								<div
-									className='flex items-center cursor-pointer hover:bg-dark-fill-3 space-x-1 rounded p-[3px]  ml-4 text-lg transition-colors duration-200 text-green-s text-dark-gray-6'
+									className='flex items-center cursor-pointer space-x-1 rounded p-[3px] ml-4 text-lg transition-all duration-200 hover:bg-surface-container'
+									style={{ color: disliked ? "var(--error)" : "var(--on-surface-variant)" }}
 									onClick={handleDislike}
 								>
-									{disliked && !updating && <AiFillDislike className='text-dark-blue-s' />}
+									{disliked && !updating && <AiFillDislike />}
 									{!disliked && !updating && <AiFillDislike />}
 									{updating && <AiOutlineLoading3Quarters className='animate-spin' />}
 
 									<span className='text-xs'>{currentProblem.dislikes}</span>
 								</div>
 								<div
-									className='cursor-pointer hover:bg-dark-fill-3  rounded p-[3px]  ml-4 text-xl transition-colors duration-200 text-green-s text-dark-gray-6 '
+									className='cursor-pointer rounded p-[3px] ml-4 text-xl transition-all duration-200 hover:bg-surface-container'
+									style={{ color: starred ? "var(--secondary)" : "var(--on-surface-variant)" }}
 									onClick={handleStar}
 								>
-									{starred && !updating && <AiFillStar className='text-dark-yellow' />}
+									{starred && !updating && <AiFillStar />}
 									{!starred && !updating && <TiStarOutline />}
 									{updating && <AiOutlineLoading3Quarters className='animate-spin' />}
 								</div>
@@ -387,7 +391,7 @@ const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, _solve
 							{problem.examples.map((example, index) => (
 								<div key={example.id}>
 									<p className='font-medium text-white '>Example {index + 1}: </p>
-									{example.img && <img src={example.img} alt='' className='mt-3' />}
+						{example.img && <Image src={example.img} alt='' className='mt-3' width={500} height={300} />}
 									<div className='example-card'>
 										<pre>
 											<strong className='text-white'>Input: </strong> {example.inputText}

@@ -696,28 +696,32 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 					 ) : null}
 				 />
 			{matchId && user ? (
-				<div className='px-4 py-2 border-b border-dark-fill-3 bg-dark-layer-2 text-xs text-gray-200'>
+				<div className='px-4 py-2 text-xs' style={{ borderBottom: "1px solid rgba(70, 69, 84, 0.15)", background: "var(--surface-container)", color: "var(--on-surface-variant)" }}>
 					<div className='flex flex-wrap items-center gap-4'>
-						<span className='font-semibold text-white'>Match: {matchStatusText}</span>
+						<span className='font-bold' style={{ color: "var(--on-surface)" }}>Match: {matchStatusText}</span>
 						<span
-							className={
-								myElapsedMs === opponentElapsedMs
-									? "text-gray-200"
-									: myElapsedMs < opponentElapsedMs
-									? "text-green-400 font-semibold"
-									: "text-red-400 font-semibold"
-							}
+							style={{
+								color:
+									myElapsedMs === opponentElapsedMs
+										? "var(--on-surface-variant)"
+										: myElapsedMs < opponentElapsedMs
+										? "var(--tertiary)"
+										: "var(--error)",
+								fontWeight: myElapsedMs === opponentElapsedMs ? "normal" : "600"
+							}}
 						>
 							You: {formatMsAsClock(myElapsedMs)}
 						</span>
 						<span
-							className={
-								myElapsedMs === opponentElapsedMs
-									? "text-gray-200"
-									: opponentElapsedMs < myElapsedMs
-									? "text-green-400 font-semibold"
-									: "text-red-400 font-semibold"
-							}
+							style={{
+								color:
+									myElapsedMs === opponentElapsedMs
+										? "var(--on-surface-variant)"
+										: opponentElapsedMs < myElapsedMs
+										? "var(--tertiary)"
+										: "var(--error)",
+								fontWeight: myElapsedMs === opponentElapsedMs ? "normal" : "600"
+							}}
 						>
 							{opponentName}: {formatMsAsClock(opponentElapsedMs)}
 						</span>

@@ -153,15 +153,17 @@ const Topbar: React.FC<TopbarProps> = ({ problemPage }) => {
 					)}
 					{user && problemPage && <Timer />}
 					{user && (
-						<div className='cursor-pointer group relative'>
-							<Image src='/avatar.png' alt='Avatar' width={30} height={30} className='rounded-full' />
-							<div
-								className='absolute top-10 left-2/4 -translate-x-2/4 mx-auto p-2 rounded shadow-lg z-40'
-								style={{ background: 'var(--surface-container)', color: 'var(--secondary)', transform: 'scale(0)', transition: 'transform 200ms ease-in-out' }}
-							>
-								<p className='text-sm' style={{ color: 'var(--on-surface)' }}>{user.email}</p>
-							</div>
-						</div>
+						<Link href='/profile'>
+                            <div className='cursor-pointer group relative'>
+                                <Image src='/avatar.png' alt='Avatar' width={30} height={30} className='rounded-full' />
+                                <div
+                                    className='absolute top-10 left-2/4 -translate-x-2/4 mx-auto p-2 rounded shadow-lg z-40'
+                                    style={{ background: 'var(--surface-container)', color: 'var(--secondary)', transform: 'scale(0)', transition: 'transform 200ms ease-in-out' }}
+                                >
+                                    <p className='text-sm' style={{ color: 'var(--on-surface)' }}>{user.email}</p>
+                                </div>
+                            </div>
+                        </Link>
 					)}
 					{user && <Logout />}
 				</div>

@@ -48,7 +48,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ problem, matchId }) => {
 	return (
 		<Split className='split' minSize={0}>
 			<ProblemDescription problem={problem} _solved={solved} />
-			<div className='bg-dark-fill-2'>
+			<div style={{ background: "var(--surface-container)" }}>
 				<Playground problem={problem} setSuccess={setSuccess} setSolved={setSolved} matchId={matchId} />
 				{success && <Confetti gravity={0.3} tweenDuration={4000} width={width - 1} height={height - 1} />}
 			</div>

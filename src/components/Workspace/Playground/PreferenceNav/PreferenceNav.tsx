@@ -130,30 +130,25 @@ const PreferenceNav: React.FC<PreferenceNavPropsWithChat> = ({
 
 			<div className='flex items-center m-2'>
 				<button
-					className={`px-2 py-1 text-xs rounded mr-2 ${
-						judgeStatus === "ok"
-							? "bg-dark-green-s text-white"
-							: judgeStatus === "down"
-							? "bg-dark-pink text-white"
-							: "bg-dark-fill-3 text-dark-label-2"
-					}`}
+					className='px-2 py-1 text-xs rounded mr-2'
 					onClick={onCheckJudge}
 					disabled={checkingJudge}
+					style={{
+						background: judgeStatus === 'ok' ? 'var(--tertiary)' : judgeStatus === 'down' ? 'var(--error)' : 'var(--surface-container-highest)',
+						color: 'var(--on-surface)'
+					}}
 				>
-					{checkingJudge ? "Checking..." : judgeStatus === "ok" ? "Judge: Online" : "Judge: Check"}
+					{checkingJudge ? 'Checking...' : judgeStatus === 'ok' ? 'Judge: Online' : 'Judge: Check'}
 				</button>
-				<button
-					className='preferenceBtn group'
-					onClick={() => setSettings({ ...settings, settingsModalIsOpen: true })}
-				>
-					<div className='h-4 w-4 text-dark-gray-6 font-bold text-lg'>
+				<button className='preferenceBtn group' onClick={() => setSettings({ ...settings, settingsModalIsOpen: true })}>
+					<div className='h-4 w-4 font-bold text-lg' style={{ color: 'var(--on-surface-variant)' }}>
 						<AiOutlineSetting />
 					</div>
 					<div className='preferenceBtn-tooltip'>Settings</div>
 				</button>
 
 				<button className='preferenceBtn group' onClick={handleFullScreen}>
-					<div className='h-4 w-4 text-dark-gray-6 font-bold text-lg'>
+					<div className='h-4 w-4 font-bold text-lg' style={{ color: 'var(--on-surface-variant)' }}>
 						{!isFullScreen ? <AiOutlineFullscreen /> : <AiOutlineFullscreenExit />}
 					</div>
 					<div className='preferenceBtn-tooltip'>Full Screen</div>

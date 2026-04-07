@@ -68,8 +68,8 @@ export default function ProblemsLibrary() {
 	}, []);
 
 	const difficultyOptions = ["All", "Easy", "Medium", "Hard"];
-	const statusOptions = ["Todo", "Solved", "Attempted"];
-	const topicOptions = ["Dynamic Programming", "Array", "Hash Table", "String", "Tree"];
+	const statusOptions = ["All", "Todo", "Solved", "Attempted"];
+	const topicOptions = ["All", "Arrays", "Hash Table", "String", "Tree", "Dynamic Programming"];
 
 	return (
 		<div style={{ background: 'var(--surface)', color: 'var(--on-surface)', minHeight: '100vh' }}>
@@ -261,7 +261,7 @@ export default function ProblemsLibrary() {
 										style={{ background: 'var(--surface-container-low)', borderColor: 'rgba(70, 69, 84, 0.15)', color: 'var(--on-surface)' }}
 									>
 										<span style={{ color: 'var(--on-surface-variant)' }}>Status:</span>
-										<span style={{ color: 'var(--on-surface)', fontWeight: 'bold' }}>{selectedStatus || 'Todo'}</span>
+										<span style={{ color: 'var(--on-surface)', fontWeight: 'bold' }}>{selectedStatus || 'All'}</span>
 										{/* <span className='material-symbols-outlined text-xs'>expand_more</span> */}
 									</button>
 									{showStatusDropdown && (
@@ -270,14 +270,14 @@ export default function ProblemsLibrary() {
 												<button
 													key={status}
 													onClick={() => {
-														setSelectedStatus(status);
+														setSelectedStatus(status === 'All' ? null : status);
 														setShowStatusDropdown(false);
 													}}
 													className='block w-full text-left px-4 py-2 transition-all first:rounded-t-lg last:rounded-b-lg text-sm'
 													style={{
-														background: selectedStatus === status ? 'var(--surface-container-highest)' : 'transparent',
-														color: selectedStatus === status ? 'var(--on-surface)' : 'var(--on-surface-variant)',
-														fontWeight: selectedStatus === status ? 'bold' : 'normal'
+														background: (status === 'All' && selectedStatus === null) || selectedStatus === status ? 'var(--surface-container-highest)' : 'transparent',
+														color: (status === 'All' && selectedStatus === null) || selectedStatus === status ? 'var(--on-surface)' : 'var(--on-surface-variant)',
+														fontWeight: (status === 'All' && selectedStatus === null) || selectedStatus === status ? 'bold' : 'normal'
 													}}
 												>
 													{status}
@@ -295,7 +295,7 @@ export default function ProblemsLibrary() {
 										style={{ background: 'var(--surface-container-low)', borderColor: 'rgba(70, 69, 84, 0.15)', color: 'var(--on-surface)' }}
 									>
 										<span style={{ color: 'var(--on-surface-variant)' }}>Topic:</span>
-										<span style={{ color: 'var(--on-surface)', fontWeight: 'bold' }}>{selectedTopic || 'Dynamic Programming'}</span>
+										<span style={{ color: 'var(--on-surface)', fontWeight: 'bold' }}>{selectedTopic || 'All'}</span>
 										{/* <span className='material-symbols-outlined text-xs'>expand_more</span> */}
 									</button>
 									{showTopicDropdown && (
@@ -304,14 +304,14 @@ export default function ProblemsLibrary() {
 												<button
 													key={topic}
 													onClick={() => {
-														setSelectedTopic(topic);
+														setSelectedTopic(topic === 'All' ? null : topic);
 														setShowTopicDropdown(false);
 													}}
 													className='block w-full text-left px-4 py-2 transition-all first:rounded-t-lg last:rounded-b-lg text-sm'
 													style={{
-														background: selectedTopic === topic ? 'var(--surface-container-highest)' : 'transparent',
-														color: selectedTopic === topic ? 'var(--on-surface)' : 'var(--on-surface-variant)',
-														fontWeight: selectedTopic === topic ? 'bold' : 'normal'
+														background: (topic === 'All' && selectedTopic === null) || selectedTopic === topic ? 'var(--surface-container-highest)' : 'transparent',
+														color: (topic === 'All' && selectedTopic === null) || selectedTopic === topic ? 'var(--on-surface)' : 'var(--on-surface-variant)',
+														fontWeight: (topic === 'All' && selectedTopic === null) || selectedTopic === topic ? 'bold' : 'normal'
 													}}
 												>
 													{topic}
@@ -361,7 +361,7 @@ export default function ProblemsLibrary() {
 											</th>
 										</tr>
 									</thead>
-									<ProblemsTable setLoadingProblems={setLoadingProblems} selectedDifficulty={selectedDifficulty} />
+									<ProblemsTable setLoadingProblems={setLoadingProblems} selectedDifficulty={selectedDifficulty} selectedStatus={selectedStatus} selectedTopic={selectedTopic} />
 								</table>
 							</div>
 

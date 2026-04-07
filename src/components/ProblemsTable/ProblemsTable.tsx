@@ -42,21 +42,31 @@ import { useAuthState } from "react-firebase-hooks/auth";
 type ProblemsTableProps = {
 	setLoadingProblems: React.Dispatch<React.SetStateAction<boolean>>;
 	selectedDifficulty?: string | null;
+	selectedStatus?: string | null;
+	selectedTopic?: string | null;
 };
 
-const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems, selectedDifficulty }) => {
+const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems, selectedDifficulty, selectedStatus, selectedTopic }) => {
 	const problems = useGetProblems(setLoadingProblems);
-	const solvedProblems = useGetSolvedProblems();
+	const { solvedProblems, attemptedProblems } = useGetSolvedProblems();
 	const [user] = useAuthState(auth);
 	const router = useRouter();
 	const [joiningId, setJoiningId] = useState<string | null>(null);
 	const [pollingInfo, setPollingInfo] = useState<{ problemId: string; userId: string } | null>(null);
-	console.log("solvedProblems", solvedProblems);
-	
-	// Filter problems based on selected difficulty
-	const filteredProblems = selectedDifficulty
-		? problems.filter((problem) => problem.difficulty === selectedDifficulty)
-		: problems;
+
+	const solved = solvedProblems ?? [];
+	const attempted = attemptedProblems ?? [];
+
+	const filteredProblems = problems.filter((problem) => {
+		if (selectedDifficulty && problem.difficulty !== selectedDifficulty) return false;
+		if (selectedStatus) {
+			if (selectedStatus === "Solved" && !solved.includes(problem.id)) return false;
+			if (selectedStatus === "Todo" && (solved.includes(problem.id) || attempted.includes(problem.id))) return false;
+			if (selectedStatus === "Attempted" && !attempted.includes(problem.id)) return false;
+		}
+		if (selectedTopic && (problem.category ?? "").toLowerCase() !== selectedTopic.toLowerCase()) return false;
+		return true;
+	});
 
 	useEffect(() => {
 		if (!pollingInfo) return;
@@ -152,7 +162,7 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems, selec
 						<tr key={problem.id} className='group hover:bg-surface-container-high transition-colors' style={{ borderBottom: '1px solid rgba(70, 69, 84, 0.05)', cursor: 'pointer' }}>
 							{/* Status Column */}
 							<td className='px-8 py-5 text-center'>
-								{solvedProblems.includes(problem.id) ? (
+								{solved.includes(problem.id) ? (
 									<span className='material-symbols-outlined' style={{ color: 'var(--tertiary-fixed-dim)', fontVariationSettings: "'FILL' 1" }}>
 										check_circle
 									</span>
@@ -381,6 +391,7 @@ function useGetProblems(setLoadingProblems: React.Dispatch<React.SetStateAction<
 }
 function useGetSolvedProblems() {
 	const [solvedProblems, setSolvedProblems] = useState<string[]>([]);
+	const [attemptedProblems, setAttemptedProblems] = useState<string[]>([]);
 	const [user] = useAuthState(auth);
 
 	useEffect(() => {
@@ -389,15 +400,19 @@ function useGetSolvedProblems() {
 			const userDoc = await getDoc(userRef);
 
 			if (userDoc.exists()) {
-				setSolvedProblems(userDoc.data().solvedProblems);
+				setSolvedProblems(userDoc.data().solvedProblems || []);
+				setAttemptedProblems(userDoc.data().attemptedProblems || []);
 			}
 		};
 
 		if (user) getSolvedProblems();
-		if (!user) setSolvedProblems([]);
+		if (!user) {
+			setSolvedProblems([]);
+			setAttemptedProblems([]);
+		}
 	}, [user]);
 
-	return solvedProblems;
+	return { solvedProblems, attemptedProblems };
 }
 
 

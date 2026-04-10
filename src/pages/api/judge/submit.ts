@@ -64,7 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		return res.status(500).json({ error: "Missing JUDGE_URL environment variable" });
 	}
 
-	const { language, code, metadata } = req.body;
+	const { language, code, metadata, problemId, beatcodeId } = req.body;
 
 	// Validation
 	if (!language || !code) {
@@ -79,7 +79,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		if (metadata && metadata.name) {
 
 			const base = judgeUrl.replace(/\/$/, "");
-			const testCases = metadata.testCases as { args: any[]; expected: any }[];
+			const testCases = metadata.testCases as { args: any[]; expected: any; inPlaceArgIndex?: number }[];
+			const normalizedFn = String(metadata.name || "").toLowerCase().replace(/[^a-z0-9_]/g, "");
+			const normalizedProblemId = String(problemId ?? "").trim().toLowerCase();
+			const normalizedBeatcodeId = String(beatcodeId ?? "").trim().toLowerCase();
+			const forcedJudgeMode =
+				normalizedProblemId === "17" || normalizedBeatcodeId === "17"
+					? "in_place_full_ordered"
+					: normalizedFn.includes("removeelement")
+					? "in_place_unordered"
+					: normalizedFn.includes("removeduplicates")
+					? "in_place_ordered"
+					: metadata.judgeMode;
 
 			const buildRequestBody = (tc: { args: any[]; expected: any }): Record<string, any> => ({
 				language,
@@ -98,13 +109,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 				for (let idx = 0; idx < testCases.length; idx += 1) {
 					const tc = testCases[idx];
 					const { data } = await postJsonWithTimeout(`${base}/run`, buildRequestBody(tc));
-					results.push(evaluateRunResult(data, tc.expected, idx));
+					results.push(
+						evaluateRunResult(data, tc.expected, idx, {
+							inPlaceArgIndex: tc.inPlaceArgIndex,
+							judgeMode: forcedJudgeMode,
+						})
+					);
 				}
 			} else {
 				results = await Promise.all(
 					testCases.map(async (tc, idx) => {
 						const { data } = await postJsonWithTimeout(`${base}/run`, buildRequestBody(tc));
-						return evaluateRunResult(data, tc.expected, idx);
+						return evaluateRunResult(data, tc.expected, idx, {
+							inPlaceArgIndex: tc.inPlaceArgIndex,
+							judgeMode: forcedJudgeMode,
+						});
 					})
 				);
 			}

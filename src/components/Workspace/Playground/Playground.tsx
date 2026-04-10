@@ -405,7 +405,12 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 		}
 		setRunning(true);
 		try {
-			const body: Record<string, any> = { language, code: userCode };
+			const body: Record<string, any> = {
+				language,
+				code: userCode,
+				problemId: problem.id,
+				beatcodeId: problem.order,
+			};
 
 			if (problem.judgeMetadata) {
 				// Function-based: pass the full metadata; server invokes the function directly
@@ -507,6 +512,8 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 				body: JSON.stringify({
 					language,
 					code: userCode,
+					problemId: problem.id,
+					beatcodeId: problem.order,
 					metadata: problem.judgeMetadata,
 				}),
 			});

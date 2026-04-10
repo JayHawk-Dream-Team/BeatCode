@@ -38,3 +38,4 @@ CLAUDE.md
 .claude/
 .vscode/settings.json
 serviceAccount.json
+/judge_server_code/

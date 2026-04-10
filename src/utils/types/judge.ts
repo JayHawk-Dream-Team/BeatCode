@@ -33,6 +33,8 @@
 export type JudgeTestCase = {
 	args: any[];
 	expected: any;
+	/** Optional index of mutated in-place argument to validate (defaults to 0). */
+	inPlaceArgIndex?: number;
 };
 
 /**
@@ -44,6 +46,8 @@ export type JudgeFunctionMetadata = {
 	name: string;
 	/** Structured test cases with arguments and expected outputs */
 	testCases: JudgeTestCase[];
+	/** Comparator mode for in-place vs return-only problems. */
+	judgeMode?: "return_only" | "in_place_ordered" | "in_place_unordered" | "in_place_full_ordered";
 	/** Optional C++ argument types parsed from starter signature (e.g., ["vector<int>&", "int"]). */
 	cppArgTypes?: string[];
 	/** Optional language-specific signature or constraints */

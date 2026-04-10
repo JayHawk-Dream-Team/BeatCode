@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		return res.status(500).json({ error: "Missing JUDGE_URL environment variable" });
 	}
 
-	const { language, code, metadata, stdin } = req.body;
+	const { language, code, metadata, stdin, problemId, beatcodeId } = req.body;
 
 	// Validation
 	if (!language || !code) {
@@ -62,9 +62,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			// Run only the first 3 test cases for a quick "Run" check
 			const testCasesToRun = metadata.testCases.slice(0, 3);
 			const base = judgeUrl.replace(/\/$/, "");
+			const normalizedFn = String(metadata.name || "").toLowerCase().replace(/[^a-z0-9_]/g, "");
+			const normalizedProblemId = String(problemId ?? "").trim().toLowerCase();
+			const normalizedBeatcodeId = String(beatcodeId ?? "").trim().toLowerCase();
+			const forcedJudgeMode =
+				normalizedProblemId === "17" || normalizedBeatcodeId === "17"
+					? "in_place_full_ordered"
+					: normalizedFn.includes("removeelement")
+					? "in_place_unordered"
+					: normalizedFn.includes("removeduplicates")
+					? "in_place_ordered"
+					: metadata.judgeMode;
 
 			const results: JudgeTestResult[] = await Promise.all(
-				testCasesToRun.map(async (tc: { args: any[]; expected: any }, idx: number) => {
+				testCasesToRun.map(async (tc: { args: any[]; expected: any; inPlaceArgIndex?: number }, idx: number) => {
 					const requestBody: Record<string, any> = {
 						language,
 						code,
@@ -80,7 +91,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 						body: JSON.stringify(requestBody),
 					});
 					const runData = await resp.json();
-					return evaluateRunResult(runData, tc.expected, idx);
+					return evaluateRunResult(runData, tc.expected, idx, {
+						inPlaceArgIndex: tc.inPlaceArgIndex,
+						judgeMode: forcedJudgeMode,
+					});
 				})
 			);
 

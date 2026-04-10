@@ -19,7 +19,12 @@ export function evaluateRunResult(
 	testIndex: number,
 	options?: {
 		inPlaceArgIndex?: number;
-		judgeMode?: "return_only" | "in_place_ordered" | "in_place_unordered" | "in_place_full_ordered";
+		judgeMode?:
+			| "return_only"
+			| "in_place_ordered"
+			| "in_place_unordered"
+			| "in_place_full_ordered"
+			| "bst_from_sorted";
 	}
 ): JudgeTestResult {
 	// Non-zero exit code → runtime/compilation error
@@ -125,6 +130,42 @@ export function evaluateRunResult(
 	const mutatedArgs = judgeEnvelope && Array.isArray(judgeEnvelope.mutatedArgs) ? judgeEnvelope.mutatedArgs : undefined;
 	const judgeMode = options?.judgeMode ?? "return_only";
 
+	if (judgeMode === "bst_from_sorted") {
+		const numsArg = mutatedArgs && Array.isArray(mutatedArgs[0]) ? mutatedArgs[0] : null;
+		if (!Array.isArray(actualResult) || !Array.isArray(numsArg)) {
+			return {
+				testIndex,
+				passed: false,
+				expected,
+				actual: actualResult,
+				error: "BST comparator requires array result and input nums array",
+				stdout: printed,
+			};
+		}
+
+		const root = buildTreeFromLevelArray(actualResult);
+		const inorderVals = inorderTraversal(root);
+		const bstValid = isValidBst(root);
+		const balanced = isBalanced(root);
+		const numsNormalized = numsArg.map((v) => (typeof v === "string" && /^-?\d+$/.test(v) ? Number(v) : v));
+		const inorderMatches = deepEqual(inorderVals, numsNormalized);
+		const passed = bstValid && balanced && inorderMatches;
+		return {
+			testIndex,
+			passed,
+			expected,
+			actual: actualResult,
+			stdout: printed,
+			...(passed
+				? {}
+				: {
+						error: `Invalid BST output: bstValid=${bstValid}, balanced=${balanced}, inorder=${JSON.stringify(
+							inorderVals
+						)}, expectedInorder=${JSON.stringify(numsNormalized)}`,
+				  }),
+		};
+	}
+
 	if (judgeMode === "in_place_full_ordered" && mutatedArgs) {
 		const argIndex = Number.isInteger(options?.inPlaceArgIndex) ? Number(options?.inPlaceArgIndex) : 0;
 		const targetArg = mutatedArgs[argIndex];
@@ -211,6 +252,65 @@ function parseExpectedArray(expected: any): any[] | null {
 	} catch {
 		return null;
 	}
+}
+
+type TreeNodeLite = { val: number; left: TreeNodeLite | null; right: TreeNodeLite | null };
+
+function buildTreeFromLevelArray(values: any[]): TreeNodeLite | null {
+	if (!Array.isArray(values) || values.length === 0) return null;
+	if (values[0] === null || values[0] === undefined) return null;
+	const root: TreeNodeLite = { val: Number(values[0]), left: null, right: null };
+	const q: TreeNodeLite[] = [root];
+	let i = 1;
+	while (q.length > 0 && i < values.length) {
+		const node = q.shift()!;
+		const leftVal = values[i++];
+		if (leftVal !== null && leftVal !== undefined) {
+			node.left = { val: Number(leftVal), left: null, right: null };
+			q.push(node.left);
+		}
+		if (i >= values.length) break;
+		const rightVal = values[i++];
+		if (rightVal !== null && rightVal !== undefined) {
+			node.right = { val: Number(rightVal), left: null, right: null };
+			q.push(node.right);
+		}
+	}
+	return root;
+}
+
+function inorderTraversal(root: TreeNodeLite | null): number[] {
+	const out: number[] = [];
+	const dfs = (node: TreeNodeLite | null) => {
+		if (!node) return;
+		dfs(node.left);
+		out.push(node.val);
+		dfs(node.right);
+	};
+	dfs(root);
+	return out;
+}
+
+function isValidBst(root: TreeNodeLite | null): boolean {
+	const validate = (node: TreeNodeLite | null, lo: number, hi: number): boolean => {
+		if (!node) return true;
+		if (!(node.val > lo && node.val < hi)) return false;
+		return validate(node.left, lo, node.val) && validate(node.right, node.val, hi);
+	};
+	return validate(root, -Infinity, Infinity);
+}
+
+function isBalanced(root: TreeNodeLite | null): boolean {
+	const height = (node: TreeNodeLite | null): number => {
+		if (!node) return 0;
+		const lh = height(node.left);
+		if (lh === -1) return -1;
+		const rh = height(node.right);
+		if (rh === -1) return -1;
+		if (Math.abs(lh - rh) > 1) return -1;
+		return Math.max(lh, rh) + 1;
+	};
+	return height(root) !== -1;
 }
 
 function parseInPlaceExpectation(expected: any): { k: number; prefix: any[] } | null {

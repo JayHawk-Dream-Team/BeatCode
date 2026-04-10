@@ -86,6 +86,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			const forcedJudgeMode =
 				normalizedProblemId === "17" || normalizedBeatcodeId === "17"
 					? "in_place_full_ordered"
+					: normalizedFn.includes("sortedarraytobst")
+					? "bst_from_sorted"
 					: normalizedFn.includes("removeelement")
 					? "in_place_unordered"
 					: normalizedFn.includes("removeduplicates")

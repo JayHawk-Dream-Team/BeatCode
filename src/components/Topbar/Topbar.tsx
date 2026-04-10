@@ -115,7 +115,7 @@ const Topbar: React.FC<TopbarProps> = ({ problemPage }) => {
 							<FaChevronLeft />
 						</div>
 						<Link
-							href='/'
+							href='/problems'
 							className='flex items-center gap-2 font-medium max-w-[170px] cursor-pointer'
 							style={{ color: 'var(--on-surface-variant)' }}
 						>

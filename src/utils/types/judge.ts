@@ -47,7 +47,12 @@ export type JudgeFunctionMetadata = {
 	/** Structured test cases with arguments and expected outputs */
 	testCases: JudgeTestCase[];
 	/** Comparator mode for in-place vs return-only problems. */
-	judgeMode?: "return_only" | "in_place_ordered" | "in_place_unordered" | "in_place_full_ordered";
+	judgeMode?:
+		| "return_only"
+		| "in_place_ordered"
+		| "in_place_unordered"
+		| "in_place_full_ordered"
+		| "bst_from_sorted";
 	/** Optional C++ argument types parsed from starter signature (e.g., ["vector<int>&", "int"]). */
 	cppArgTypes?: string[];
 	/** Optional language-specific signature or constraints */

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Name of Code Artifact: [pid].tsx (problem detail page)
  * Brief Description: Resolves a problem by route id, hydrates local or Firestore-backed problem data, and renders the coding workspace.
  * Programmer: Jonathan Johnston

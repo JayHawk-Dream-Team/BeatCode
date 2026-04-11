@@ -237,6 +237,35 @@ export function evaluateRunResult(
 		};
 	}
 
+	const intersectionExpected = parseIntersectionExpected(expected);
+	if (intersectionExpected) {
+		const actualArr = Array.isArray(actualResult) ? actualResult : actualResult == null ? [] : [actualResult];
+		if (intersectionExpected.kind === "none") {
+			const passed = actualArr.length === 0;
+			return {
+				testIndex,
+				passed,
+				expected,
+				actual: actualResult,
+				stdout: printed,
+				...(passed ? {} : { error: `Expected no intersection, got ${JSON.stringify(actualArr)}` }),
+			};
+		}
+
+		const firstVal = actualArr.length > 0 ? Number(actualArr[0]) : NaN;
+		const passed = Number.isFinite(firstVal) && firstVal === intersectionExpected.value;
+		return {
+			testIndex,
+			passed,
+			expected,
+			actual: actualResult,
+			stdout: printed,
+			...(passed
+				? {}
+				: { error: `Expected intersection at '${intersectionExpected.value}', got ${JSON.stringify(actualArr)}` }),
+		};
+	}
+
 	const passed = deepEqual(actualResult, expected);
 	return { testIndex, passed, expected, actual: actualResult, stdout: printed };
 }
@@ -340,6 +369,20 @@ function parseLiteralToken(token: string): any {
 	if (/^(true|false)$/i.test(token)) return token.toLowerCase() === "true";
 	if (/^".*"$/.test(token) || /^'.*'$/.test(token)) return token.slice(1, -1);
 	return token;
+}
+
+function parseIntersectionExpected(expected: any): { kind: "value"; value: number } | { kind: "none" } | null {
+	if (typeof expected !== "string") return null;
+	const trimmed = expected.trim();
+	if (!trimmed) return null;
+
+	if (/^no\s+intersection$/i.test(trimmed)) return { kind: "none" };
+
+	const match = trimmed.match(/^intersected\s+at\s+'?(-?\d+)'?$/i);
+	if (!match) return null;
+	const value = Number.parseInt(match[1], 10);
+	if (!Number.isFinite(value)) return null;
+	return { kind: "value", value };
 }
 
 /**

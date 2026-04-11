@@ -32,6 +32,7 @@
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { AiFillYoutube } from "react-icons/ai";
+import { BsCheckCircleFill, BsCircle } from "react-icons/bs";
 import { useRouter } from "next/router";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { auth, firestore } from "@/firebase/firebase";
@@ -163,13 +164,19 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems, selec
 							{/* Status Column */}
 							<td className='px-8 py-5 text-center'>
 								{solved.includes(problem.id) ? (
-									<span className='material-symbols-outlined' style={{ color: 'var(--tertiary-fixed-dim)', fontVariationSettings: "'FILL' 1" }}>
-										check_circle
-									</span>
+									<BsCheckCircleFill
+										size={18}
+										aria-label='Solved'
+										title='Solved'
+										style={{ color: 'var(--tertiary-fixed-dim)' }}
+									/>
 								) : (
-									<span className='material-symbols-outlined' style={{ color: 'rgba(70, 69, 84, 0.3)' }}>
-										circle
-									</span>
+									<BsCircle
+										size={16}
+										aria-label='Unsolved'
+										title='Unsolved'
+										style={{ color: 'rgba(70, 69, 84, 0.3)' }}
+									/>
 								)}
 							</td>
 

@@ -35,6 +35,36 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { JudgeResponse, JudgeTestResult } from "@/utils/types/judge";
 import { evaluateRunResult, buildJudgeResponse } from "@/utils/judgeHelpers";
 
+function deriveFunctionName(language: "javascript" | "python" | "cpp", code: string): string | undefined {
+	const src = String(code || "");
+	if (!src.trim()) return undefined;
+
+	if (language === "python") {
+		const matches = [...src.matchAll(/\bdef\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)];
+		for (const m of matches) {
+			const name = m[1];
+			if (name && name !== "__init__") return name;
+		}
+		return undefined;
+	}
+
+	if (language === "javascript") {
+		const fnDecl = src.match(/\bfunction\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/);
+		if (fnDecl?.[1]) return fnDecl[1];
+		const fnExpr = src.match(/\b(?:var|let|const)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*function\b/);
+		if (fnExpr?.[1]) return fnExpr[1];
+		const arrow = src.match(/\b(?:var|let|const)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>/);
+		if (arrow?.[1]) return arrow[1];
+		return undefined;
+	}
+
+	const classMethod = src.match(/\bclass\s+Solution\b[\s\S]*?\b(?:public|private|protected)\s*:\s*[\s\S]*?\b([A-Za-z_][A-Za-z0-9_]*)\s*\([^;{}]*\)\s*\{/);
+	if (classMethod?.[1]) return classMethod[1];
+	const freeFn = src.match(/\b(?:auto|void|bool|int|long long|double|string|vector<[^>]+>|std::vector<[^>]+>|\w+)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\([^;{}]*\)\s*\{/);
+	if (freeFn?.[1]) return freeFn[1];
+	return undefined;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
 	if (req.method !== "POST") {
 		return res.status(405).json({ error: "Method not allowed" });
@@ -62,7 +92,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			// Run only the first 3 test cases for a quick "Run" check
 			const testCasesToRun = metadata.testCases.slice(0, 3);
 			const base = judgeUrl.replace(/\/$/, "");
-			const normalizedFn = String(metadata.name || "").toLowerCase().replace(/[^a-z0-9_]/g, "");
+			const metadataName = String(metadata.name || "").trim();
+			const derivedName = deriveFunctionName(language, code);
+			const effectiveFunctionName =
+				metadataName && metadataName.toLowerCase() !== "solution" ? metadataName : derivedName || metadataName || "solution";
+			const normalizedFn = String(effectiveFunctionName || "").toLowerCase().replace(/[^a-z0-9_]/g, "");
 			const normalizedProblemId = String(problemId ?? "").trim().toLowerCase();
 			const normalizedBeatcodeId = String(beatcodeId ?? "").trim().toLowerCase();
 			const forcedJudgeMode =
@@ -81,7 +115,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 					const requestBody: Record<string, any> = {
 						language,
 						code,
-						functionName: metadata.name,
+						functionName: effectiveFunctionName,
 						args: tc.args,
 					...(language === "cpp" && Array.isArray(metadata.cppArgTypes) ? { argTypes: metadata.cppArgTypes } : {}),
 						timeoutMs: 5000,

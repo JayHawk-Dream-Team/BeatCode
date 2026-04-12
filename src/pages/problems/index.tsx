@@ -30,6 +30,7 @@ import { auth } from "@/firebase/firebase";
 import { useSetRecoilState } from "recoil";
 import { authModalState } from "@/atoms/authModalAtom";
 import { GiCrossedSwords } from "react-icons/gi";
+import { useMatchmaking } from "@/hooks/useMatchmaking";
 
 export default function ProblemsLibrary() {
 	const [user] = useAuthState(auth);
@@ -49,6 +50,7 @@ export default function ProblemsLibrary() {
 		setAuthModalState((prev) => ({ ...prev, isOpen: true, type: "login" }));
 	};
 
+	const { handleJoinPvP, joiningPvP } = useMatchmaking(handleAuthClick);
 	// Close dropdowns when clicking outside
 	useEffect(() => {
 		function handleClickOutside(event: MouseEvent) {
@@ -188,9 +190,14 @@ export default function ProblemsLibrary() {
 									Competitive coding is better with rivals. Join a 1v1 battle arena now.
 								</p>
 								<div>
-									<button className='text-on-primary-container px-8 py-3 rounded-lg font-bold flex items-center gap-3 transition-all active:scale-95' style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-container))' }}>
+									<button 
+										onClick={handleJoinPvP}
+										disabled={joiningPvP}
+										className='text-on-primary-container px-8 py-3 rounded-lg font-bold flex items-center gap-3 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed' 
+										style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-container))' }}
+									>
                                         <GiCrossedSwords size={20} />
-										Join PvP
+										{joiningPvP ? "Finding opponent..." : "Join PvP"}
 									</button>
 								</div>
 							</div>

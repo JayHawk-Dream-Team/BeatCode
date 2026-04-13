@@ -31,10 +31,13 @@ import { useSetRecoilState } from "recoil";
 import { authModalState } from "@/atoms/authModalAtom";
 import { GiCrossedSwords } from "react-icons/gi";
 import { useMatchmaking } from "@/hooks/useMatchmaking";
+import { useRouter } from "next/navigation";
+import { getRandomProblemNumber, getProblemIdByBeatcodeId } from "@/utils/matchmakingHelpers";
 
 export default function ProblemsLibrary() {
 	const [user] = useAuthState(auth);
 	const setAuthModalState = useSetRecoilState(authModalState);
+	const router = useRouter();
 	const [loadingProblems, setLoadingProblems] = useState(true);
 	const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null);
 	const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
@@ -68,6 +71,22 @@ export default function ProblemsLibrary() {
 		document.addEventListener("mousedown", handleClickOutside);
 		return () => document.removeEventListener("mousedown", handleClickOutside);
 	}, []);
+
+	const handleRandomProblem = async () => {
+        try {
+            const randomNumber = getRandomProblemNumber();
+            const problemId = await getProblemIdByBeatcodeId(randomNumber);
+            
+            if (problemId) {
+                router.push(`/problems/${problemId}`);
+            } else {
+                console.warn("Problem not found");
+                // Optionally show a toast notification
+            }
+        } catch (err) {
+            console.error("Error fetching random problem:", err);
+        }
+    };
 
 	const difficultyOptions = ["All", "Easy", "Medium", "Hard"];
 	const statusOptions = ["All", "Todo", "Solved", "Attempted"];
@@ -331,7 +350,11 @@ export default function ProblemsLibrary() {
 
 							{/* Random Pick Button */}
 							<>
-								<button className='text-on-primary-container px-5 py-2 text-sm font-bold rounded-lg shadow-lg active:scale-95 transition-all' style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-container))' }}>
+								<button 
+									onClick={handleRandomProblem} 
+									className='text-on-primary-container px-5 py-2 text-sm font-bold rounded-lg shadow-lg active:scale-95 transition-all' 
+									style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-container))' }}
+								>
 									Pick A Random Problem
 								</button>
 							</>

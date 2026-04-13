@@ -89,6 +89,7 @@ export default function TournamentsIndex() {
 					"Content-Type": "application/json",
 					Authorization: `Bearer ${token}`,
 				},
+				body: JSON.stringify({ userId: user.uid }),
 			});
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error || "Failed to join");

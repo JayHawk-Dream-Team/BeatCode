@@ -40,6 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
 	const userId = await verifyAuthToken(req);
+	console.log("[create] verifyAuthToken result:", userId, "body.userId:", req.body?.userId, "authHeader:", req.headers.authorization?.substring(0, 20));
 	if (!userId) return res.status(401).json({ error: "Authentication required" });
 
 	const { playerCount, difficulty, name, timeLimitMs } = req.body || {};

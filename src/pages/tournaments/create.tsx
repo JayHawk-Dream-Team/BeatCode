@@ -71,6 +71,7 @@ export default function CreateTournament() {
 					Authorization: `Bearer ${token}`,
 				},
 				body: JSON.stringify({
+					userId: user.uid,
 					name: name.trim() || undefined,
 					playerCount,
 					difficulty,

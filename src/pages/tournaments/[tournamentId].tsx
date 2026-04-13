@@ -63,10 +63,11 @@ export default function TournamentPage() {
 		fetchState();
 	}, [fetchState]);
 
-	// Poll when active
+	// Poll when lobby (waiting for start) or active (watching bracket progress)
 	useEffect(() => {
-		if (!tournament || tournament.status !== "active") return;
-		const interval = setInterval(fetchState, 3000);
+		if (!tournament) return;
+		if (tournament.status !== "lobby" && tournament.status !== "active") return;
+		const interval = setInterval(fetchState, tournament.status === "lobby" ? 2000 : 3000);
 		return () => clearInterval(interval);
 	}, [tournament?.status, fetchState]);
 

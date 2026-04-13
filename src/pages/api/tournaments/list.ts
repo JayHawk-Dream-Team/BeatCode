@@ -44,16 +44,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 		const pageLimit = Math.min(Number(req.query.limit) || 50, 100);
 
-		const q = query(
-			collection(firestore, "tournaments"),
-			where("status", "in", statuses),
-			orderBy("createdAt", "desc"),
-			firestoreLimit(pageLimit)
-		);
+		let snapshot;
+		try {
+			// Single status uses == (no composite index needed)
+			if (statuses.length === 1) {
+				const q = query(
+					collection(firestore, "tournaments"),
+					where("status", "==", statuses[0]),
+					orderBy("createdAt", "desc"),
+					firestoreLimit(pageLimit)
+				);
+				snapshot = await getDocs(q);
+			} else {
+				const q = query(
+					collection(firestore, "tournaments"),
+					where("status", "in", statuses),
+					orderBy("createdAt", "desc"),
+					firestoreLimit(pageLimit)
+				);
+				snapshot = await getDocs(q);
+			}
+		} catch {
+			// Fallback if composite index is missing: fetch without ordering
+			const q = query(
+				collection(firestore, "tournaments"),
+				firestoreLimit(pageLimit)
+			);
+			snapshot = await getDocs(q);
+			// Client-side filter + sort
+			const statusSet = new Set(statuses);
+			const filtered = snapshot.docs
+				.filter(d => statusSet.has(d.data().status))
+				.sort((a, b) => {
+					const aTime = a.data().createdAt?.toMillis?.() || 0;
+					const bTime = b.data().createdAt?.toMillis?.() || 0;
+					return bTime - aTime;
+				});
+			return res.status(200).json({
+				tournaments: filtered.map(d => ({ id: d.id, ...d.data() })),
+			});
+		}
 
-		const snapshot = await getDocs(q);
 		const tournaments = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
 		return res.status(200).json({ tournaments });
 	} catch (err: any) {
 		return res.status(500).json({ error: String(err?.message || err) });

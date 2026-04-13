@@ -86,6 +86,7 @@ export default function TournamentLobby({ tournament: initialTournament, current
 			const res = await fetch(`/api/tournaments/${initialTournament.id}/leave`, {
 				method: "POST",
 				headers,
+				body: JSON.stringify({ userId: currentUserId }),
 			});
 			if (!res.ok) {
 				const data = await res.json();
@@ -106,6 +107,7 @@ export default function TournamentLobby({ tournament: initialTournament, current
 			const res = await fetch(`/api/tournaments/${initialTournament.id}/cancel`, {
 				method: "POST",
 				headers,
+				body: JSON.stringify({ userId: currentUserId }),
 			});
 			if (!res.ok) {
 				const data = await res.json();

@@ -1,3 +1,10 @@
+/*
+ * Authors:            Cole DuBois
+ * Date Created:      2026-04-06
+ * Last Updated:      2026-04-12
+ * Description:       Helper functions for matchmaking logic, including fetching problems and queue management.
+ */
+
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { firestore } from "@/firebase/firebase";
 
@@ -44,7 +51,36 @@ export async function getProblemIdByBeatcodeId(beatcodeId: number): Promise<stri
 	}
 }
 
-// Get user's unsolved problems 
+/**
+ * Checks if there is a current player in the matchmaking queue.
+ * Retrieves the first player in the queue and returns their associated problem ID.
+ *
+ * @returns The problem ID of the queued player, or null if queue is empty
+ * @throws Error if Firestore query fails
+ */
+export async function getPlayerFromQueue(): Promise<string | null> {
+    try {
+        const querySnapshot = await getDocs(
+            collection(firestore, "matchmaking_queue")
+        );
 
-// Get user's unsolved problems and return a random one
+        if (querySnapshot.empty) {
+            console.log("[matchmakingHelpers] Matchmaking queue is empty");
+            return null;
+        }
 
+        // Get the first player in the queue
+        const queuedPlayer = querySnapshot.docs[0].data();
+        
+        if (!queuedPlayer.problemId) {
+            console.warn("[matchmakingHelpers] Queued player missing problem_id field");
+            return null;
+        }
+
+        console.log("Found queued player:", queuedPlayer, queuedPlayer.problemId);
+        return queuedPlayer.problemId;
+    } catch (err) {
+        console.error("[matchmakingHelpers] Error fetching player from queue:", err);
+        throw err;
+    }
+}

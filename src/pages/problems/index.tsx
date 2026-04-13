@@ -146,7 +146,10 @@ export default function ProblemsLibrary() {
                         )}
 						{user && (
 							<>
-								<button className='text-on-primary-container px-5 py-2 text-sm font-bold rounded-lg shadow-lg active:scale-95 transition-all' style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-container))' }}>
+								<button 
+								onClick={() => router.push('/profile')}
+								className='text-on-primary-container px-5 py-2 text-sm font-bold rounded-lg shadow-lg active:scale-95 transition-all' 
+								style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-container))' }}>
 									Profile
 								</button>
 							</>

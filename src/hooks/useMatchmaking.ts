@@ -14,7 +14,7 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, firestore } from "@/firebase/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { toast } from "react-toastify";
-import { getRandomProblemNumber, getProblemIdByBeatcodeId } from "@/utils/matchmakingHelpers";
+import { getRandomProblemNumber, getProblemIdByBeatcodeId, getPlayerFromQueue } from "@/utils/matchmakingHelpers";
 
 interface UseMatchmakingReturn {
 	handleJoinPvP: () => Promise<void>;
@@ -25,7 +25,7 @@ export function useMatchmaking(onAuthRequired: () => void): UseMatchmakingReturn
 	const router = useRouter();
 	const [user] = useAuthState(auth);
 	const [joiningPvP, setJoiningPvP] = useState(false);
-	const [pollingInfo, setPollingInfo] = useState<{ userId: string } | null>(null);
+	const [pollingInfo, setPollingInfo] = useState<{ userId: string; problemId: string } | null>(null);
 
 	// Polling for random PvP match
 	useEffect(() => {
@@ -35,22 +35,26 @@ export function useMatchmaking(onAuthRequired: () => void): UseMatchmakingReturn
 				const res = await fetch("/api/matchmaking/check", {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ userId: pollingInfo.userId }),
+					body: JSON.stringify({ userId: pollingInfo.userId, problemId: pollingInfo.problemId }),
 				});
 				const data = await res.json();
-				if (data.matchId) {
-					router.push(`/problems/${data.problemId}?matchId=${data.matchId}`);
+
+                console.log("Polling matchmaking status:", data);
+
+				if (data.matchId) { //&& data.problemId) {
+					router.push(`/problems/${pollingInfo.problemId}?matchId=${data.matchId}`);
 					setPollingInfo(null);
 				}
 			} catch (err) {
 				// ignore polling errors
+                console.error("Error polling matchmaking status:", err);
 			}
 		}, 2000);
 		return () => clearInterval(interval);
 	}, [pollingInfo, router]);
 
 	const handleJoinPvP = async () => {
-		// Require auth
+		// Require auth to join PvP queue
 		if (!user) {
 			onAuthRequired();
 			return;
@@ -73,37 +77,77 @@ export function useMatchmaking(onAuthRequired: () => void): UseMatchmakingReturn
 				// fallback below
 			}
 
-			const randomNumber = getRandomProblemNumber();
-			const randomProblemId = await getProblemIdByBeatcodeId(randomNumber);
-
 			const preferredDisplayName =
 				dbDisplayName ||
 				(user.displayName && user.displayName.trim()) ||
 				(user.email ? user.email.split("@")[0] : "") ||
 				"Player";
 
-			const response = await fetch("/api/matchmaking/join", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					userId: user.uid,
-					displayName: preferredDisplayName,
-					problemId: randomProblemId,
-				}),
-			});
 
-			const data = await response.json();
-			if (!response.ok) throw new Error(data.error || "Failed to join queue");
+			const queuedPlayerId = await getPlayerFromQueue();
+			console.log("Checked matchmaking queue, got problemId:", queuedPlayerId);
 
-			if (data.queued) {
-				toast.info("Queued for match - waiting for an opponent", {
-					position: "top-center",
-					theme: "dark",
+			let response: Response;
+            let data: any;
+
+			if (queuedPlayerId) {
+				response = await fetch("/api/matchmaking/join", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						userId: user.uid,
+						displayName: preferredDisplayName,
+						problemId: queuedPlayerId,
+					}),
 				});
-				setPollingInfo({ userId: user.uid });
+                
+                data = await response.json();
+
+                if (!response.ok) throw new Error(data.error || "Failed to join queue");
+
+                if (data.queued) {
+                    toast.info("Queued for match - waiting for an opponent", {
+                        position: "top-center",
+                        theme: "dark",
+                    });
+                    setPollingInfo({ userId: user.uid, problemId: queuedPlayerId });
+                } else {
+                    router.push(`/problems/${queuedPlayerId}?matchId=${data.matchId}`);
+                }
+
 			} else {
-				router.push(`/problems/${data.problemId}?matchId=${data.matchId}`);
+
+				const randomNumber = getRandomProblemNumber();
+				const randomProblemId = await getProblemIdByBeatcodeId(randomNumber);
+
+				if (!randomProblemId) throw new Error("Could not find a problem for matchmaking");
+
+				response = await fetch("/api/matchmaking/join", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						userId: user.uid,
+						displayName: preferredDisplayName,
+						problemId: randomProblemId,
+					}),
+				});	
+                
+                data = await response.json(); 
+
+                if (!response.ok) throw new Error(data.error || "Failed to join queue");
+
+                if (data.queued) {
+                    toast.info("Queued for match - waiting for an opponent", {
+                        position: "top-center",
+                        theme: "dark",
+                    });
+                    setPollingInfo({ userId: user.uid, problemId: randomProblemId });
+                } else {
+                    router.push(`/problems/${randomProblemId}?matchId=${data.matchId}`);
+                }
+
 			}
+
 		} catch (err: any) {
 			toast.error(err.message || "Unable to join matchmaking", {
 				position: "top-center",

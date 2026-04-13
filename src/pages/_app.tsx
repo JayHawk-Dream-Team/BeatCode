@@ -34,6 +34,10 @@ import Head from "next/head";
 import { RecoilRoot, RecoilEnv } from "recoil";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import dynamic from "next/dynamic";
+
+// AudioManager uses the Web Audio API and must only run on the client
+const AudioManager = dynamic(() => import("@/components/AudioManager/AudioManager"), { ssr: false });
 
 // Written by Carlos with help from Claude
 // Suppress the duplicate atom key warning caused by Next.js hot module replacement
@@ -51,6 +55,7 @@ export default function App({ Component, pageProps }: AppProps) {
 					content='BeatCode — a coding challenge platform with problems and video solutions'
 				/>
 			</Head>
+			<AudioManager />
 			<ToastContainer />
 			<Component {...pageProps} />
 		</RecoilRoot>

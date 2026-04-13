@@ -34,10 +34,11 @@ import Link from "next/link";
 import React from "react";
 import { useAuthState } from "react-firebase-hooks/auth";
 import Logout from "../Buttons/Logout";
-import { useSetRecoilState } from "recoil";
+import { useSetRecoilState, useRecoilState } from "recoil";
 import { authModalState } from "@/atoms/authModalAtom";
+import { audioMutedAtom } from "@/atoms/audioAtom";
 import Image from "next/image";
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
 import { BsList } from "react-icons/bs";
 import Timer from "../Timer/Timer";
 import { useRouter } from "next/router";
@@ -51,6 +52,7 @@ type TopbarProps = {
 const Topbar: React.FC<TopbarProps> = ({ problemPage }) => {
 	const [user] = useAuthState(auth);
 	const setAuthModalState = useSetRecoilState(authModalState);
+	const [muted, setMuted] = useRecoilState(audioMutedAtom);
 	const router = useRouter();
 	const { matchId } = router.query;
 
@@ -135,6 +137,14 @@ const Topbar: React.FC<TopbarProps> = ({ problemPage }) => {
 				)}
 
 				<div className='flex items-center space-x-4 flex-1 justify-end'>
+					<button
+						onClick={() => setMuted((m) => !m)}
+						title={muted ? "Unmute music" : "Mute music"}
+						className='flex items-center justify-center rounded h-8 w-8 cursor-pointer'
+						style={{ background: 'var(--surface-container)', color: 'var(--on-surface-variant)' }}
+					>
+						{muted ? <FaVolumeMute size={16} /> : <FaVolumeUp size={16} />}
+					</button>
 					{problemPage && matchId && (
 						<div style={{ background: 'var(--error)', color: 'var(--on-surface)', padding: '0.25rem 0.75rem', borderRadius: '0.375rem', marginRight: '0.5rem', fontSize: '0.875rem' }}>In Match</div>
 					)}

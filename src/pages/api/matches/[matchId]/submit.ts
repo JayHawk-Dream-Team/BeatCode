@@ -34,78 +34,23 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { collection, doc, addDoc, serverTimestamp, setDoc, getDoc } from "firebase/firestore";
 import { firestore } from "../../../../firebase/firebase";
+import { toNumberMap, getStartedAtMs, getElapsedMs, computeWinner } from "../../../../utils/matchHelpers";
+import { verifyAuthToken } from "../../../../utils/authHelpers";
 
 const PENALTY_MS = Number(process.env.MATCH_SUBMISSION_PENALTY_MS || 60_000);
-
-function toNumberMap(raw: unknown): Record<string, number> {
-  if (!raw || typeof raw !== "object") return {};
-  const out: Record<string, number> = {};
-  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
-    const n = Number(value);
-    out[key] = Number.isFinite(n) ? n : 0;
-  }
-  return out;
-}
-
-function getStartedAtMs(data: Record<string, any>): number {
-  if (typeof data.startedAtMs === "number" && Number.isFinite(data.startedAtMs)) return data.startedAtMs;
-  if (data.createdAt?.toMillis) return data.createdAt.toMillis();
-  return Date.now();
-}
-
-function getElapsedMs(
-  userId: string,
-  nowMs: number,
-  startedAtMs: number,
-  penaltiesMs: Record<string, number>,
-  solvedElapsedMs: Record<string, number>
-): number {
-  const solved = solvedElapsedMs[userId];
-  if (typeof solved === "number" && Number.isFinite(solved)) return solved;
-  const elapsed = Math.max(0, nowMs - startedAtMs);
-  return elapsed + (penaltiesMs[userId] || 0);
-}
-
-function computeWinner(
-  players: string[],
-  nowMs: number,
-  startedAtMs: number,
-  penaltiesMs: Record<string, number>,
-  solvedElapsedMs: Record<string, number>
-): { winner: string; reason: "first_correct_and_faster" | "both_correct_lower_time" | "opponent_clock_exceeded" } | null {
-  if (players.length < 2) return null;
-  const [a, b] = players;
-  const aSolved = typeof solvedElapsedMs[a] === "number";
-  const bSolved = typeof solvedElapsedMs[b] === "number";
-
-  if (aSolved && bSolved) {
-    const aTime = solvedElapsedMs[a];
-    const bTime = solvedElapsedMs[b];
-    if (aTime <= bTime) return { winner: a, reason: "both_correct_lower_time" };
-    return { winner: b, reason: "both_correct_lower_time" };
-  }
-
-  if (aSolved && !bSolved) {
-    const aTime = solvedElapsedMs[a];
-    const bNow = getElapsedMs(b, nowMs, startedAtMs, penaltiesMs, solvedElapsedMs);
-    if (aTime < bNow) return { winner: a, reason: "opponent_clock_exceeded" };
-  }
-
-  if (bSolved && !aSolved) {
-    const bTime = solvedElapsedMs[b];
-    const aNow = getElapsedMs(a, nowMs, startedAtMs, penaltiesMs, solvedElapsedMs);
-    if (bTime < aNow) return { winner: b, reason: "opponent_clock_exceeded" };
-  }
-
-  return null;
-}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { matchId } = req.query;
   if (!matchId || typeof matchId !== "string") return res.status(400).json({ error: "Missing matchId" });
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { userId, result, details } = req.body || {};
+  // Auth: verify token if present; derive userId from token or fallback to body
+  const verifiedUid = await verifyAuthToken(req);
+  const bodyUserId = req.body?.userId;
+  const { result, details } = req.body || {};
+
+  // For tournament matches, token is required (checked after reading match doc below)
+  const userId = verifiedUid || bodyUserId;
   if (!userId || !result) return res.status(400).json({ error: "Missing userId or result" });
 
   try {
@@ -114,6 +59,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!matchSnap.exists()) return res.status(404).json({ error: "Match not found" });
 
     const matchData = matchSnap.data() as Record<string, any>;
+
+    // Tournament matches require verified auth token — no spoofing allowed
+    if (matchData.tournamentId && !verifiedUid) {
+      return res.status(401).json({ error: "Authentication required for tournament matches" });
+    }
+
     const players = Array.isArray(matchData.players) ? matchData.players.map((p: any) => p?.userId).filter(Boolean) : [];
     if (!players.includes(userId)) return res.status(403).json({ error: "User is not part of this match" });
 

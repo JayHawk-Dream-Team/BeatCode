@@ -105,7 +105,7 @@ export default function Home() {
 							<p className='text-on-surface-variant text-lg mt-4'>Synchronized logic duels. Two engineers, one problem, infinite permutations.</p>
 						</div>
 
-						<div className='grid grid-cols-1 md:grid-cols-3 gap-8'>
+						<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8'>
 							{/* Card 1 */}
 							<div className='p-8 rounded-xl border' style={{ background: 'var(--surface-container)', borderColor: 'rgba(70, 69, 84, 0.1)' }}>
 								<span className='material-symbols-outlined block text-4xl mb-6' style={{ color: 'var(--primary)' }}>swords</span>
@@ -135,6 +135,18 @@ export default function Home() {
 									<div className='h-full w-4/5 rounded-full' style={{ background: 'var(--primary)' }}></div>
 								</div>
 							</div>
+
+							{/* Card 4 — Tournament Mode */}
+							<Link href='/tournaments'>
+								<div className='p-8 rounded-xl border cursor-pointer transition-all hover:scale-[1.02]' style={{ background: 'var(--surface-container)', borderColor: 'rgba(70, 69, 84, 0.1)' }}>
+									<span className='material-symbols-outlined block text-4xl mb-6' style={{ color: 'var(--primary)' }}>trophy</span>
+									<h3 className='text-xl font-bold text-on-surface mb-3'>Tournament Mode</h3>
+									<p className='text-on-surface-variant text-sm leading-relaxed mb-6'>Bracket elimination. 4, 8, or 16 players. One champion.</p>
+									<div className='h-1 w-full rounded-full' style={{ background: 'var(--surface-container-highest)' }}>
+										<div className='h-full w-1/3 rounded-full' style={{ background: 'var(--primary)' }}></div>
+									</div>
+								</div>
+							</Link>
 						</div>
 					</div>
 				</section>

@@ -153,6 +153,11 @@ const Topbar: React.FC<TopbarProps> = ({ problemPage }) => {
 							Problems
 						</Link>
 					)}
+					{!problemPage && (
+						<Link href='/tournaments' className='font-medium' style={{ color: 'var(--on-surface-variant)' }}>
+							Tournaments
+						</Link>
+					)}
 					{!user && (
 						<Link
 							href='/auth'

@@ -177,9 +177,13 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 		async (result: "accepted" | "failed", details: any) => {
 			if (!matchId || !user) return;
 			try {
+				const token = await user.getIdToken();
 				await fetch(`/api/matches/${matchId}/submit`, {
 					method: "POST",
-					headers: { "Content-Type": "application/json" },
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${token}`,
+					},
 					body: JSON.stringify({
 						userId: user.uid,
 						result,
@@ -328,7 +332,14 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 							});
 						}
 						setTimeout(() => {
-							if (!cancelled) router.push("/");
+							if (!cancelled) {
+								// Tournament-aware redirect: go to bracket page if this is a tournament match
+								if (data.tournamentId) {
+									router.push(`/tournaments/${data.tournamentId}`);
+								} else {
+									router.push("/");
+								}
+							}
 						}, 1200);
 					}
 				}

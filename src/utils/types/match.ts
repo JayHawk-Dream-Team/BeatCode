@@ -45,6 +45,7 @@ export type Match = {
   penaltiesMs?: Record<string, number>;
   solvedElapsedMs?: Record<string, number>;
   winnerDecidedAtMs?: number;
+  tournamentId?: string;
   createdAt?: any;
   updatedAt?: any;
 };

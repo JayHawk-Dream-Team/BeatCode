@@ -131,6 +131,8 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	const {
 		query: { pid },
 	} = router;
+	const normalizedProblemId =
+		typeof pid === "string" && pid.trim().length > 0 ? pid : problem.id;
 
 	// Firestore testcases
 	const [firestoreTestcases, setFirestoreTestcases] = useState<any[]>([]);
@@ -381,7 +383,7 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 		return [javascript()];
 	}, [language]);
 
-	const codeStorageKey = `code-${pid}-${language}`;
+	const codeStorageKey = `code-${normalizedProblemId}-${language}`;
 
 	/**
 	 * Artifact:             handleSubmit
@@ -550,7 +552,7 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 
 				const userRef = doc(firestore, "users", user.uid);
 				await updateDoc(userRef, {
-					solvedProblems: arrayUnion(pid),
+					solvedProblems: arrayUnion(normalizedProblemId),
 				});
 				setSolved(true);
 
@@ -622,22 +624,22 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 		}
 
 		const stored = localStorage.getItem(codeStorageKey);
+		if (!stored) {
+			setUserCode(defaultCode);
+			return;
+		}
 
-		if (user) {
-			if (!stored) {
-				setUserCode(defaultCode);
-			} else {
-				const parsed = JSON.parse(stored) as string;
-				// If the stored code is the old generic stub, replace it with the proper starter
-				const isOldGenericStub =
-					/^def\s+\w+\s*\(\s*\):\s*\n\s+# Write your solution here\s*\n\s+pass/.test(parsed.trim()) ||
-					/^#include.*\nauto\s+\w+\s*\(\)\s*\{/.test(parsed.trim());
-				setUserCode(isOldGenericStub ? defaultCode : parsed);
-			}
-		} else {
+		try {
+			const parsed = JSON.parse(stored) as string;
+			// If the stored code is the old generic stub, replace it with the proper starter
+			const isOldGenericStub =
+				/^def\s+\w+\s*\(\s*\):\s*\n\s+# Write your solution here\s*\n\s+pass/.test(parsed.trim()) ||
+				/^#include.*\nauto\s+\w+\s*\(\)\s*\{/.test(parsed.trim());
+			setUserCode(isOldGenericStub ? defaultCode : parsed);
+		} catch {
 			setUserCode(defaultCode);
 		}
-	}, [codeStorageKey, user, language, getDefaultStarterCode, matchId]);
+	}, [codeStorageKey, language, getDefaultStarterCode, matchId]);
 
 	/**
 	 * Artifact:             onChange

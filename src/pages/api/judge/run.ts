@@ -117,6 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 						code,
 						functionName: effectiveFunctionName,
 						args: tc.args,
+						beatcodeId,
 					...(language === "cpp" && Array.isArray(metadata.cppArgTypes) ? { argTypes: metadata.cppArgTypes } : {}),
 						timeoutMs: 5000,
 					};

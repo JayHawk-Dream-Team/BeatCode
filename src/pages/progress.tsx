@@ -84,7 +84,7 @@ const ProgressPage = () => {
                         status,
                         likes: dbProblem.likes || 0,
                         dislikes: dbProblem.dislikes || 0,
-                        order: dbProblem.order || dbProblem.beatcodeId ? parseInt(dbProblem.beatcodeId!) : 999,
+                        order: dbProblem.order || (dbProblem.beatcodeId ? parseInt(dbProblem.beatcodeId) : 999),
                     });
                 });
 

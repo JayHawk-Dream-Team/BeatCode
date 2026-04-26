@@ -105,28 +105,33 @@ const PreferenceNav: React.FC<PreferenceNavPropsWithChat> = ({
 	}, [isFullScreen]);
 
 	return (
-
-		       <div className='flex items-center justify-between bg-dark-layer-2 h-11 w-full '>
-			       <div className='flex items-center text-white'>
-				       <div className='flex cursor-pointer items-center rounded focus:outline-none bg-dark-fill-3 text-dark-label-2 hover:bg-dark-fill-2 px-2 py-1.5 font-medium'>
-					       <select
-						       className='text-xs bg-transparent outline-none text-label-2 dark:text-dark-label-2 cursor-pointer'
-						       value={language}
-						       onChange={(e) => setLanguage(e.target.value as JudgeLanguage)}
-					       >
-						       <option value='javascript' className='bg-dark-layer-1 text-white'>
-							       JavaScript
-						       </option>
-						       <option value='python' className='bg-dark-layer-1 text-white'>
-							       Python
-						       </option>
-						       <option value='cpp' className='bg-dark-layer-1 text-white'>
-							       C++
-						       </option>
-					       </select>
-				       </div>
-				       {chatButton}
-			       </div>
+		<div
+			className='flex items-center justify-between h-11 w-full'
+			style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}
+		>
+			<div className='flex items-center'>
+				<div
+					className='flex cursor-pointer items-center rounded px-2 py-1.5 font-medium'
+					style={{ background: 'var(--surface-container-highest)', color: 'var(--on-surface-variant)' }}
+				>
+					<select
+						className='text-xs bg-transparent outline-none cursor-pointer'
+						value={language}
+						onChange={(e) => setLanguage(e.target.value as JudgeLanguage)}
+						style={{ color: 'var(--on-surface)' }}
+					>
+						<option value='javascript' style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>
+							JavaScript
+						</option>
+						<option value='python' style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>
+							Python
+						</option>
+						<option value='cpp' style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>
+							C++
+						</option>
+					</select>
+				</div>
+			</div>
 
 			<div className='flex items-center m-2'>
 				<button

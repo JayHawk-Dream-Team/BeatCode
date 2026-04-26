@@ -677,44 +677,16 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 	const showComplexityTab = complexityAnalysis !== null || complexityLoading || complexityError !== null;
 
 	return (
-		<div className='flex flex-col bg-dark-layer-1 relative overflow-x-hidden'>
-			{/* Chat Panel (multiplayer only) */}
-						{matchId && user && (
-							<Chat
-								matchId={matchId}
-								opponentName={opponentName}
-								selfName={selfName}
-								isOpen={chatOpen}
-								onClose={() => setChatOpen(false)}
-								onNewMessage={handleNewMessage}
-							/>
-						)}
-			 <PreferenceNav
-					 settings={settings}
-					 setSettings={setSettings}
-					 language={language}
-					 setLanguage={(next) => setStoredLanguage(next)}
-					 judgeStatus={judgeStatus}
-					 checkingJudge={checkingJudge}
-					 onCheckJudge={checkJudgeHealth}
-					 chatButton={matchId && user ? (
-						 <button
-							 className={`ml-2 px-3 py-1.5 rounded bg-dark-fill-3 hover:bg-dark-fill-2 text-xs font-medium relative ${hasUnread ? "text-red-500" : "text-white"}`}
-							 onClick={() => {
-								 setChatOpen((open) => {
-									 if (!open) setHasUnread(false); // clear unread when opening chat
-									 return !open;
-								 });
-							 }}
-							 aria-label="Toggle chat"
-						 >
-							 Chat
-							 {hasUnread && (
-								 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-							 )}
-						 </button>
-					 ) : null}
-				 />
+		<div className='flex flex-col relative overflow-x-hidden' style={{ background: 'var(--surface)' }}>
+			<PreferenceNav
+				settings={settings}
+				setSettings={setSettings}
+				language={language}
+				setLanguage={(next) => setStoredLanguage(next)}
+				judgeStatus={judgeStatus}
+				checkingJudge={checkingJudge}
+				onCheckJudge={checkJudgeHealth}
+			/>
 			{matchId && user ? (
 				<div className='px-4 py-2 text-xs' style={{ borderBottom: "1px solid rgba(70, 69, 84, 0.15)", background: "var(--surface-container)", color: "var(--on-surface-variant)" }}>
 					<div className='flex flex-wrap items-center gap-4'>
@@ -764,87 +736,60 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 				<div className='w-full px-5 overflow-auto pb-[50px]'>
 					{/* Tab bar: Testcases + Complexity (when available) */}
 					<div className='flex h-10 items-center space-x-6'>
-						<div
-							className='relative flex h-full flex-col justify-center cursor-pointer'
-							onClick={() => setActiveBottomTab("testcases")}
-						>
-							<div className={`text-sm font-medium leading-5 ${activeBottomTab === "testcases" ? "text-white" : "text-gray-500"}`}>
-								Testcases
-							</div>
-							{activeBottomTab === "testcases" && (
-								<hr className='absolute bottom-0 h-0.5 w-full rounded-full border-none bg-white' />
-							)}
-						</div>
-						{showComplexityTab && (
-							<div
-								className='relative flex h-full flex-col justify-center cursor-pointer'
-								onClick={() => setActiveBottomTab("complexity")}
-							>
-								<div className={`text-sm font-medium leading-5 ${activeBottomTab === "complexity" ? "text-white" : "text-gray-500"}`}>
-									Complexity
+						<div className='relative flex h-full flex-col justify-center cursor-pointer'>
+									<div className='text-sm font-medium leading-5' style={{ color: 'var(--on-surface)' }}>Testcases</div>
+									<hr className='absolute bottom-0 h-0.5 w-full rounded-full border-none' style={{ background: 'rgba(229,226,225,0.08)' }} />
 								</div>
-								{activeBottomTab === "complexity" && (
-									<hr className='absolute bottom-0 h-0.5 w-full rounded-full border-none bg-white' />
-								)}
-							</div>
-						)}
 					</div>
 
-					{/* Tab content */}
-					{activeBottomTab === "testcases" ? (
+					{/* Prefer Firestore testcases if available, else fallback to problem.examples */}
+					{loadingTestcases ? (
+					<p className='text-sm mt-4' style={{ color: 'var(--on-surface-variant)' }}>Loading test cases...</p>
+					) : testCases.length > 0 ? (
 						<>
-							{/* Prefer Firestore testcases if available, else fallback to problem.examples */}
-							{loadingTestcases ? (
-								<p className='text-sm text-gray-400 mt-4'>Loading test cases...</p>
-							) : testCases.length > 0 ? (
-								<>
-									<div className='flex'>
-										{testCases.map((tc, index) => (
-											<div
-												className='mr-2 items-start mt-2 '
-												key={index}
-												onClick={() => setActiveTestCaseId(index)}
-											>
-												<div
-													className={`font-medium items-center transition-all focus:outline-none inline-flex bg-dark-fill-3 hover:bg-dark-fill-2 relative rounded-lg px-4 py-1 cursor-pointer whitespace-nowrap
-														${activeTestCaseId === index ? "text-white" : "text-gray-500"}
-													`}
-												>
-													Test Case {index + 1}
-												</div>
-											</div>
-										))}
-									</div>
-									<div className='font-semibold my-4'>
-										<p className='text-sm font-medium mt-4 text-white'>Input:</p>
-										<div className='w-full cursor-text rounded-lg border px-3 py-[10px] bg-dark-fill-3 border-transparent text-white mt-2'>
-											{testCases[activeTestCaseId]?.input}
-										</div>
-										<p className='text-sm font-medium mt-4 text-white'>Output:</p>
-										<div className='w-full cursor-text rounded-lg border px-3 py-[10px] bg-dark-fill-3 border-transparent text-white mt-2'>
-											{testCases[activeTestCaseId]?.expectedOutput}
+							<div className='flex'>
+								{testCases.map((tc, index) => (
+									<div
+										className='mr-2 items-start mt-2 '
+										key={index}
+										onClick={() => setActiveTestCaseId(index)}
+									>
+										<div
+											className={`font-medium items-center transition-all focus:outline-none inline-flex relative rounded-lg px-4 py-1 cursor-pointer whitespace-nowrap ${
+												activeTestCaseId === index ? "" : ""
+											}`}
+											style={{
+												background: activeTestCaseId === index ? 'var(--surface-container-highest)' : 'var(--surface-container)',
+												color: activeTestCaseId === index ? 'var(--on-surface)' : 'var(--on-surface-variant)'
+											}}
+										>
+											Test Case {index + 1}
 										</div>
 									</div>
-								</>
-							) : (
-								<p className='text-sm text-gray-400 mt-4'>No test cases available for this problem.</p>
-							)}
-
-							{/* Captured stdout (printed output) from the last run */}
-							{runStdout ? (
-								<div className='mt-4'>
-									<p className='text-sm font-medium text-white'>Stdout (prints):</p>
-									<pre className='whitespace-pre-wrap bg-dark-fill-3 rounded-lg p-3 text-white mt-2 overflow-auto'>{runStdout}</pre>
+								))}
+							</div>
+							<div className='font-semibold my-4'>
+								<p className='text-sm font-medium mt-4 text-white'>Input:</p>
+								<div className='w-full cursor-text rounded-lg px-3 py-[10px] mt-2' style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>
+									{testCases[activeTestCaseId]?.input}
 								</div>
-							) : null}
+								<p className='text-sm font-medium mt-4 text-white'>Output:</p>
+								<div className='w-full cursor-text rounded-lg px-3 py-[10px] mt-2' style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>
+									{testCases[activeTestCaseId]?.expectedOutput}
+								</div>
+							</div>
 						</>
 					) : (
-						<ComplexityPanel
-							analysis={complexityAnalysis}
-							loading={complexityLoading}
-							error={complexityError}
-						/>
+						<p className='text-sm mt-4' style={{ color: 'var(--on-surface-variant)' }}>No test cases available for this problem.</p>
 					)}
+
+				{/* Captured stdout (printed output) from the last run */}
+				{runStdout ? (
+					<div className='mt-4'>
+						<p className='text-sm font-medium' style={{ color: 'var(--on-surface)' }}>Stdout (prints):</p>
+						<pre className='whitespace-pre-wrap rounded-lg p-3 mt-2 overflow-auto' style={{ background: 'var(--surface-container)', color: 'var(--on-surface-variant)' }}>{runStdout}</pre>
+					</div>
+				) : null}
 				</div>
 			</Split>
 

@@ -44,7 +44,7 @@ type EditorFooterProps = {
 
 const EditorFooter: React.FC<EditorFooterProps> = ({ handleRun, handleSubmit, running, submitting, isMultiplayer = false, onToggleAIHelp, aiHelpDisabled = false }) => {
 	return (
-		<div className='flex absolute bottom-0 z-10 w-full border-t border-dark-fill-3' style={{ backgroundColor: "#1e1e1e" }}>
+		<div className='flex absolute bottom-0 z-10 w-full' style={{ background: 'var(--surface)' }}>
 			<div className='mx-5 my-[10px] flex justify-between w-full'>
 				<div className='mr-2 flex flex-1 flex-nowrap items-center space-x-4'>
 					<button className='px-3 py-1.5 font-medium items-center transition-all inline-flex rounded-lg pl-3 pr-2' style={{ background: 'var(--surface-container)', color: 'var(--on-surface-variant)' }}>
@@ -66,23 +66,21 @@ const EditorFooter: React.FC<EditorFooterProps> = ({ handleRun, handleSubmit, ru
 				<div className='ml-auto flex items-center space-x-4'>
 					{!isMultiplayer && (
 						<button
-							className='px-4 py-1.5 text-sm font-medium items-center whitespace-nowrap transition-all focus:outline-none inline-flex rounded-lg border border-green-600 text-green-400 hover:bg-green-900/30 disabled:opacity-40 disabled:cursor-not-allowed'
+							className='px-3 py-1.5 text-sm font-medium items-center whitespace-nowrap transition-all focus:outline-none inline-flex rounded-lg'
 							onClick={handleRun}
 							disabled={running || submitting}
 							style={{ background: 'var(--surface-container)', color: 'var(--on-surface-variant)' }}
 						>
-							<BsPlayFill className='mr-1.5' />
-							{running ? "Running..." : "Run"}
+							{running ? 'Running...' : 'Run'}
 						</button>
 					)}
 					<button
-						className='px-4 py-1.5 font-medium items-center transition-all focus:outline-none inline-flex text-sm text-white bg-dark-green-s hover:bg-green-3 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed'
+						className='px-3 py-1.5 font-medium items-center transition-all focus:outline-none inline-flex text-sm rounded-lg'
 						onClick={handleSubmit}
 						disabled={running || submitting}
 						style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-container))', color: 'var(--on-primary-container)' }}
 					>
-						<AiOutlineSend className='mr-1.5' />
-						{submitting ? "Submitting..." : "Submit"}
+						{submitting ? 'Submitting...' : 'Submit'}
 					</button>
 				</div>
 			</div>

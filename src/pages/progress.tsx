@@ -139,15 +139,9 @@ const ProgressPage = () => {
     }, [progressData]);
 
     const difficultyColorMap: Record<string, string> = {
-        easy: "text-tertiary",
-        medium: "text-secondary",
-        hard: "text-error",
-        default: "text-on-surface-variant",
-    };
-
-    const statusColorMap: Record<string, string> = {
-        solved: "text-tertiary",
-        attempted: "text-secondary",
+        easy: "text-green-500",
+        medium: "text-yellow-500",
+        hard: "text-red-500",
         default: "text-on-surface-variant",
     };
 
@@ -167,7 +161,9 @@ const ProgressPage = () => {
     };
 
     const getStatusColor = (status: string) => {
-        return statusColorMap[status] || statusColorMap.default;
+        if (status === "solved") return "text-green-500";
+        if (status === "attempted") return "text-yellow-500";
+        return "text-on-surface-variant";
     };
 
     if (!hasMounted || loading || (!user && !router.isReady)) {

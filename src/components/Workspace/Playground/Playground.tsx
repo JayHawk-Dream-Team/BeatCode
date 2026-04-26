@@ -50,7 +50,7 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, firestore } from "@/firebase/firebase";
 import { toast } from "react-toastify";
 import { useRouter } from "next/router";
-import { arrayUnion, doc, updateDoc } from "firebase/firestore";
+import { arrayUnion, arrayRemove, doc, updateDoc } from "firebase/firestore";
 import useLocalStorage from "@/hooks/useLocalStorage";
 
 // Dynamically import Chat to avoid SSR issues
@@ -462,30 +462,44 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 						: failedTest
 						? `Expected ${JSON.stringify(failedTest.expected)}, got ${JSON.stringify(failedTest.actual)}`
 						: data.message || data.status;
-					toast.error(`${passed}/${total} passed — Test ${(failedTest?.testIndex ?? 0) + 1}: ${detail}`, {
-						position: "top-center",
-						autoClose: 4000,
-						theme: "dark",
-					});
-					setRunStdout(undefined);
-					setHasFailedRun(true);
-				}
-			} else {
-				// Legacy response: exitCode-based
-				if (data.exitCode === 0) {
-					toast.success("Code ran successfully", { position: "top-center", autoClose: 2500, theme: "dark" });
-				} else {
-					toast.error(data.stderr || "Runtime or compile error", {
-						position: "top-center",
-						autoClose: 3500,
-						theme: "dark",
-					});
-					setHasFailedRun(true);
+				toast.error(`${passed}/${total} passed — Test ${(failedTest?.testIndex ?? 0) + 1}: ${detail}`, {
+					position: "top-center",
+					autoClose: 4000,
+					theme: "dark",
+				});
+				setRunStdout(undefined);
+				setHasFailedRun(true);
+				if (user) {
+					try {
+						await updateDoc(doc(firestore, "users", user.uid), {
+							attemptedProblems: arrayUnion(normalizedProblemId),
+						});
+					} catch { /* non-critical, ignore */ }
 				}
 			}
-		} catch (error: any) {
-			toast.error(error.message || "Unable to run code", { position: "top-center", autoClose: 3000, theme: "dark" });
-			setHasFailedRun(true);
+		} else {
+			// Legacy response: exitCode-based
+			if (data.exitCode === 0) {
+				toast.success("Code ran successfully", { position: "top-center", autoClose: 2500, theme: "dark" });
+			} else {
+				toast.error(data.stderr || "Runtime or compile error", {
+					position: "top-center",
+					autoClose: 3500,
+					theme: "dark",
+				});
+				setHasFailedRun(true);
+				if (user) {
+					try {
+						await updateDoc(doc(firestore, "users", user.uid), {
+							attemptedProblems: arrayUnion(normalizedProblemId),
+						});
+					} catch { /* non-critical, ignore */ }
+				}
+			}
+		}
+	} catch (error: any) {
+		toast.error(error.message || "Unable to run code", { position: "top-center", autoClose: 3000, theme: "dark" });
+		setHasFailedRun(true);
 		} finally {
 			setRunning(false);
 		}
@@ -553,6 +567,7 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 				const userRef = doc(firestore, "users", user.uid);
 				await updateDoc(userRef, {
 					solvedProblems: arrayUnion(normalizedProblemId),
+					attemptedProblems: arrayRemove(normalizedProblemId),
 				});
 				setSolved(true);
 
@@ -573,14 +588,19 @@ const Playground: React.FC<PlaygroundProps> = ({ problem, setSuccess, setSolved,
 					: failedTest
 					? `Expected ${JSON.stringify(failedTest.expected)}, got ${JSON.stringify(failedTest.actual)}`
 					: data.message || data.status || "One or more test cases failed";
-				toast.error(
-					total > 0
-						? `${passed}/${total} passed — Test ${(failedTest?.testIndex ?? 0) + 1}: ${detail}`
-						: detail,
-					{ position: "top-center", autoClose: 4000, theme: "dark" }
-				);
-				setHasFailedSubmit(true);
-				await notifyMatchSubmission("failed", data);
+			toast.error(
+				total > 0
+					? `${passed}/${total} passed — Test ${(failedTest?.testIndex ?? 0) + 1}: ${detail}`
+					: detail,
+				{ position: "top-center", autoClose: 4000, theme: "dark" }
+			);
+			setHasFailedSubmit(true);
+			await notifyMatchSubmission("failed", data);
+			try {
+				await updateDoc(doc(firestore, "users", user.uid), {
+					attemptedProblems: arrayUnion(normalizedProblemId),
+				});
+			} catch { /* non-critical, ignore */ }
 			}
 		} catch (error: any) {
 			toast.error(error.message || "Unable to submit code", {

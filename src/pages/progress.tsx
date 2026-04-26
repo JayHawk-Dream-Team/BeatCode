@@ -6,8 +6,7 @@ import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/router";
 import { useEffect, useState, useMemo } from "react";
 import { toast } from "react-toastify";
-import { problems } from "@/utils/problems";
-import { Problem, DBProblem } from "@/utils/types/problem";
+import { DBProblem } from "@/utils/types/problem";
 
 type ProblemProgress = {
     id: string;

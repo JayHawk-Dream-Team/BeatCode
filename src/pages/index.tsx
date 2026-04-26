@@ -116,16 +116,6 @@ export default function Home() {
 								</div>
 							</div>
 
-							{/* Card 2 */}
-							<div className='p-8 rounded-xl border' style={{ background: 'var(--surface-container)', borderColor: 'rgba(70, 69, 84, 0.1)' }}>
-								<span className='material-symbols-outlined block text-4xl mb-6' style={{ color: 'var(--secondary)' }}>Ranked</span>
-								<h3 className='text-xl font-bold text-on-surface mb-3'>Ranked Ladders</h3>
-								<p className='text-on-surface-variant text-sm leading-relaxed mb-6'>Climb seasonal tiers from Bronze to Diamond and reach the legend hall.</p>
-								<div className='h-1 w-full rounded-full' style={{ background: 'var(--surface-container-highest)' }}>
-									<div className='h-full w-1/2 rounded-full' style={{ background: 'var(--secondary)' }}></div>
-								</div>
-							</div>
-
 							{/* Card 3 */}
 							<div className='p-8 rounded-xl border' style={{ background: 'var(--surface-container)', borderColor: 'rgba(70, 69, 84, 0.1)' }}>
 								<span className='material-symbols-outlined block text-4xl mb-6' style={{ color: 'var(--tertiary)' }}>Proximity Chat</span>

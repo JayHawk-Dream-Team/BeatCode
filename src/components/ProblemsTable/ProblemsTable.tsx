@@ -45,9 +45,16 @@ type ProblemsTableProps = {
 	selectedDifficulty?: string | null;
 	selectedStatus?: string | null;
 	selectedTopic?: string | null;
+	onTopicsChange?: (topics: string[]) => void;
 };
 
-const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems, selectedDifficulty, selectedStatus, selectedTopic }) => {
+const ProblemsTable: React.FC<ProblemsTableProps> = ({
+	setLoadingProblems,
+	selectedDifficulty,
+	selectedStatus,
+	selectedTopic,
+	onTopicsChange,
+}) => {
 	const problems = useGetProblems(setLoadingProblems);
 	const { solvedProblems, attemptedProblems } = useGetSolvedProblems();
 	const [user] = useAuthState(auth);
@@ -68,6 +75,18 @@ const ProblemsTable: React.FC<ProblemsTableProps> = ({ setLoadingProblems, selec
 		if (selectedTopic && (problem.category ?? "").toLowerCase() !== selectedTopic.toLowerCase()) return false;
 		return true;
 	});
+
+	useEffect(() => {
+		if (!onTopicsChange) return;
+		const uniqueTopics = Array.from(
+			new Set(
+				problems
+					.map((problem) => String(problem.category || "").trim())
+					.filter((topic) => topic.length > 0)
+			)
+		).sort((a, b) => a.localeCompare(b));
+		onTopicsChange(["All", ...uniqueTopics]);
+	}, [problems, onTopicsChange]);
 
 	useEffect(() => {
 		if (!pollingInfo) return;

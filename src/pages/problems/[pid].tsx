@@ -468,18 +468,48 @@ function parseValueForHarness(raw: unknown): any {
 	}
 
 	if ((token.startsWith('"') && token.endsWith('"')) || (token.startsWith("'") && token.endsWith("'"))) {
-		const normalized = token.startsWith("'")
-			? `"${token.slice(1, -1).replace(/\\"/g, '"')}`
-			: token;
+		const tryNestedJson = (value: string): any => {
+			const trimmedValue = value.trim();
+			if ((trimmedValue.startsWith("[") && trimmedValue.endsWith("]")) || (trimmedValue.startsWith("{") && trimmedValue.endsWith("}"))) {
+				try {
+					return JSON.parse(trimmedValue);
+				} catch {
+					return value;
+				}
+			}
+			return value;
+		};
+
+		// 1) Try parsing the quoted token directly.
 		try {
-			const parsed = JSON.parse(normalized);
-			if (typeof parsed === "string" && ((parsed.startsWith("[") && parsed.endsWith("]")) || (parsed.startsWith("{") && parsed.endsWith("}")))) {
-				return JSON.parse(parsed);
+			const parsed = JSON.parse(token);
+			if (typeof parsed === "string") {
+				const nested = tryNestedJson(parsed);
+				if (nested !== parsed) return nested;
 			}
 			return parsed;
 		} catch {
-			return token.slice(1, -1);
+			// continue to fallback paths
 		}
+
+		// 2) Fallback: remove outer quotes and try to parse inner payload.
+		const inner = token.slice(1, -1);
+		try {
+			const parsedInner = JSON.parse(inner);
+			if (typeof parsedInner === "string") {
+				const nested = tryNestedJson(parsedInner);
+				if (nested !== parsedInner) return nested;
+			}
+			return parsedInner;
+		} catch {
+			// continue
+		}
+
+		// 3) Final fallback: unescape common quoted JSON patterns and retry.
+		const unescaped = inner.replace(/\\"/g, '"');
+		const nested = tryNestedJson(unescaped);
+		if (nested !== unescaped) return nested;
+		return inner;
 	}
 
 	if (/^-?\d+\.\d+$/.test(token)) return Number(token);
@@ -498,9 +528,38 @@ function normalizeCaseFromRawInput(rawInput: unknown): any[] {
 		const trimmed = rawInput.trim();
 		if (trimmed === "") return [];
 
+		// Prefer full-value JSON parsing first (arrays/objects or quoted JSON),
+		// so inputs like Sudoku boards remain a single argument.
+		const directParsed = parseValueForHarness(trimmed);
+		if (!(typeof directParsed === "string" && directParsed === trimmed)) {
+			return [directParsed];
+		}
+
 		if (trimmed.includes(",")) {
 			const csv = splitTopLevelCommaSegments(trimmed);
 			if (csv.length > 1) {
+				// Generic repair path:
+				// Some scraped inputs represent a single named argument split across top-level commas
+				// (for example matrix rows without an outer wrapper). If we detect exactly one
+				// assignment segment and continuation segments, reconstruct it as one argument.
+				const assignmentSegments = csv.filter((segment) => segment.includes("="));
+				if (assignmentSegments.length === 1 && csv[0].includes("=")) {
+					const eqIdx = csv[0].indexOf("=");
+					const rhsStart = csv[0].slice(eqIdx + 1).trim();
+					const continuation = [rhsStart, ...csv.slice(1)].join(",").trim();
+					let repaired = parseValueForHarness(continuation);
+					if (
+						typeof repaired === "string" &&
+						repaired === continuation &&
+						continuation.length > 0
+					) {
+						repaired = parseValueForHarness(`[${continuation}]`);
+					}
+					if (repaired !== undefined) {
+						return [repaired];
+					}
+				}
+
 				const values = csv
 					.map((segment) => {
 						if (segment.includes("=")) {
@@ -541,10 +600,17 @@ function normalizeCaseFromRawInput(rawInput: unknown): any[] {
 function normalizeRawCase(rawCase: Record<string, unknown> | undefined): { args: any[]; expected: any } | null {
 	if (!rawCase || typeof rawCase !== "object") return null;
 
-	const input = rawCase.input ?? rawCase.args ?? rawCase.testInput ?? rawCase.stdin;
+	const input = rawCase.input ?? rawCase.testInput ?? rawCase.stdin;
+	const explicitArgs = rawCase.args;
 	const expected = rawCase.expected ?? rawCase.expectedOutput ?? rawCase.output ?? rawCase.answer;
 
-	const args = normalizeCaseFromRawInput(input);
+	// Prefer explicit args arrays as full argument lists.
+	// For `input` arrays (common for matrix/board problems), treat as a single argument.
+	const args = Array.isArray(explicitArgs)
+		? explicitArgs.map((value) => parseValueForHarness(value))
+		: Array.isArray(input)
+		? [parseValueForHarness(input)]
+		: normalizeCaseFromRawInput(input);
 	const parsedExpected = parseValueForHarness(expected);
 
 	if (!Array.isArray(args) || args.length === 0 || parsedExpected === undefined) {

@@ -52,6 +52,7 @@ export type JudgeFunctionMetadata = {
 		| "in_place_ordered"
 		| "in_place_unordered"
 		| "in_place_full_ordered"
+		| "unordered_nested"
 		| "bst_from_sorted";
 	/** Optional C++ argument types parsed from starter signature (e.g., ["vector<int>&", "int"]). */
 	cppArgTypes?: string[];

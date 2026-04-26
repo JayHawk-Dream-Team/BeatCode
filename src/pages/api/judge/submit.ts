@@ -84,6 +84,175 @@ function deriveFunctionName(language: "javascript" | "python" | "cpp", code: str
 	return undefined;
 }
 
+function deriveFunctionArity(language: "javascript" | "python" | "cpp", code: string, functionName: string): number | undefined {
+	const src = String(code || "");
+	const fn = String(functionName || "").trim();
+	if (!src.trim() || !fn) return undefined;
+
+	const splitParams = (block: string): string[] => {
+		return block
+			.split(",")
+			.map((p) => p.trim())
+			.filter(Boolean)
+			.map((p) => p.split("=")[0].trim())
+			.filter(Boolean);
+	};
+
+	if (language === "python") {
+		const m = src.match(new RegExp(`\\bdef\\s+${fn}\\s*\\(([^)]*)\\)`));
+		if (!m) return undefined;
+		const params = splitParams(m[1]).filter((p) => p !== "self" && p !== "cls");
+		return params.length;
+	}
+
+	if (language === "javascript") {
+		const decl = src.match(new RegExp(`\\bfunction\\s+${fn}\\s*\\(([^)]*)\\)`));
+		if (decl) return splitParams(decl[1]).length;
+		const expr = src.match(new RegExp(`\\b(?:var|let|const)\\s+${fn}\\s*=\\s*(?:async\\s*)?function\\s*\\(([^)]*)\\)`));
+		if (expr) return splitParams(expr[1]).length;
+		const arrow = src.match(new RegExp(`\\b(?:var|let|const)\\s+${fn}\\s*=\\s*(?:async\\s*)?\\(([^)]*)\\)\\s*=>`));
+		if (arrow) return splitParams(arrow[1]).length;
+		return undefined;
+	}
+
+	// C++: best-effort parse
+	const cpp = src.match(new RegExp(`\\b${fn}\\s*\\(([^)]*)\\)`));
+	if (!cpp) return undefined;
+	return splitParams(cpp[1]).length;
+}
+
+function adaptArgsForFunctionArity(
+	language: "javascript" | "python" | "cpp",
+	code: string,
+	functionName: string,
+	args: any[]
+): any[] {
+	if (!Array.isArray(args)) return args;
+	const arity = deriveFunctionArity(language, code, functionName);
+	if (arity === 1 && args.length > 1) return [args];
+	return args;
+}
+
+function decodeSerializedArg(value: any): any {
+	const tryParseJson = (s: string): { ok: boolean; value: any } => {
+		try {
+			return { ok: true, value: JSON.parse(s) };
+		} catch {
+			return { ok: false, value: s };
+		}
+	};
+
+	const normalize = (v: any): any => {
+		if (Array.isArray(v)) {
+			const mapped = v.map(normalize);
+			// If this is an array of serialized rows, decode each row JSON string.
+			if (mapped.every((x) => typeof x === "string")) {
+				const rowDecoded = mapped.map((row) => {
+					const t = String(row).trim();
+					const parsed = tryParseJson(t);
+					if (parsed.ok) return parsed.value;
+					// Fallback for python-like quoted rows
+					if ((t.startsWith("[") && t.endsWith("]")) || (t.startsWith("{") && t.endsWith("}"))) {
+						const retry = tryParseJson(t.replace(/'/g, '"'));
+						if (retry.ok) return retry.value;
+					}
+					return row;
+				});
+				if (rowDecoded.some((x) => Array.isArray(x) || (x && typeof x === "object"))) return rowDecoded;
+			}
+			return mapped;
+		}
+		if (v && typeof v === "object") {
+			const out: Record<string, any> = {};
+			for (const [k, val] of Object.entries(v)) out[k] = normalize(val);
+			return out;
+		}
+		if (typeof v !== "string") return v;
+
+		let cur: any = v;
+		for (let i = 0; i < 5; i += 1) {
+			if (typeof cur !== "string") break;
+			const t = cur.trim();
+			if (!t) break;
+
+			const direct = tryParseJson(t);
+			if (direct.ok) {
+				cur = direct.value;
+				continue;
+			}
+
+			// Strip one outer quote layer and retry.
+			if (
+				(t.startsWith('"') && t.endsWith('"')) ||
+				(t.startsWith("'") && t.endsWith("'"))
+			) {
+				cur = t.slice(1, -1);
+				continue;
+			}
+
+			// Python-ish list/dict strings with single quotes.
+			if ((t.startsWith("[") && t.endsWith("]")) || (t.startsWith("{") && t.endsWith("}"))) {
+				const retry = tryParseJson(t.replace(/'/g, '"'));
+				if (retry.ok) {
+					cur = retry.value;
+					continue;
+				}
+			}
+			break;
+		}
+		return typeof cur === "string" ? cur : normalize(cur);
+	};
+
+	return normalize(value);
+}
+
+function normalizeArgsPayload(args: any[]): any[] {
+	if (!Array.isArray(args)) return args as any;
+	const decoded = args.map((arg) => decodeSerializedArg(arg));
+	// Handle tokenized assignment-style args like: ["board", "=", <value>]
+	// emitted by some scraped test-case inputs.
+	if (
+		decoded.length >= 3 &&
+		typeof decoded[0] === "string" &&
+		decoded[1] === "="
+	) {
+		const rhs = decoded.slice(2);
+		return rhs.length === 1 ? [rhs[0]] : [rhs];
+	}
+	return decoded;
+}
+
+function applyProblemSpecificArgCoercions(functionName: string, args: any[]): any[] {
+	if (!Array.isArray(args)) return args;
+	const normalizedFn = String(functionName || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+	if (normalizedFn === "multiply" && args.length >= 2) {
+		const coerced = [...args];
+		coerced[0] = String(coerced[0]);
+		coerced[1] = String(coerced[1]);
+		return coerced;
+	}
+	if (normalizedFn === "isnumber" && args.length >= 1) {
+		const coerced = [...args];
+		coerced[0] = String(coerced[0]);
+		return coerced;
+	}
+	if (normalizedFn === "maximalrectangle" && args.length >= 1 && Array.isArray(args[0])) {
+		const coerced = [...args];
+		coerced[0] = (args[0] as any[]).map((row) =>
+			Array.isArray(row) ? row.map((cell) => String(cell)) : row
+		);
+		return coerced;
+	}
+	if (normalizedFn === "solvesudoku" && args.length >= 1 && Array.isArray(args[0])) {
+		const coerced = [...args];
+		coerced[0] = (args[0] as any[]).map((row) =>
+			Array.isArray(row) ? row.map((cell) => (cell === "." ? "." : String(cell))) : row
+		);
+		return coerced;
+	}
+	return args;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
 	if (req.method !== "POST") {
 		return res.status(405).json({ error: "Method not allowed" });
@@ -120,6 +289,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			const forcedJudgeMode =
 				normalizedProblemId === "17" || normalizedBeatcodeId === "17"
 					? "in_place_full_ordered"
+					: normalizedFn.includes("nextpermutation")
+					? "in_place_full_ordered"
+					: normalizedFn === "rotate"
+					? "in_place_full_ordered"
+					: normalizedFn === "solvesudoku"
+					? "in_place_full_ordered"
+					: normalizedFn.includes("groupanagrams")
+					? "unordered_nested"
 					: normalizedFn.includes("sortedarraytobst")
 					? "bst_from_sorted"
 					: normalizedFn.includes("removeelement")
@@ -132,9 +309,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 				language,
 				code,
 				functionName: effectiveFunctionName,
-				args: tc.args,
+				args: adaptArgsForFunctionArity(
+					language,
+					code,
+					effectiveFunctionName,
+					applyProblemSpecificArgCoercions(
+						effectiveFunctionName,
+						normalizeArgsPayload(tc.args)
+					)
+				),
 				beatcodeId,
 				...(language === "cpp" && Array.isArray(metadata.cppArgTypes) ? { argTypes: metadata.cppArgTypes } : {}),
+				...(forcedJudgeMode && forcedJudgeMode !== "return_only" ? { captureMutatedArgs: true } : {}),
 				timeoutMs: 5000,
 			});
 

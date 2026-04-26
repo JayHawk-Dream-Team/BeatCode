@@ -21,7 +21,7 @@
  * Known Faults:         None known.
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import ProblemsTable from "@/components/ProblemsTable/ProblemsTable";
@@ -90,7 +90,13 @@ export default function ProblemsLibrary() {
 
 	const difficultyOptions = ["All", "Easy", "Medium", "Hard"];
 	const statusOptions = ["All", "Todo", "Solved", "Attempted"];
-	const topicOptions = ["All", "Arrays", "Hash Table", "String", "Tree", "Dynamic Programming"];
+	const [topicOptions, setTopicOptions] = useState<string[]>(["All"]);
+	const handleTopicsChange = useCallback((topics: string[]) => {
+		setTopicOptions((prev) => {
+			if (prev.length === topics.length && prev.every((v, i) => v === topics[i])) return prev;
+			return topics;
+		});
+	}, []);
 
 	return (
 		<div style={{ background: 'var(--surface)', color: 'var(--on-surface)', minHeight: '100vh' }}>
@@ -112,12 +118,9 @@ export default function ProblemsLibrary() {
 							>
 								Problems
 							</Link>
-							<a href='#' style={{ color: 'var(--on-surface-variant)' }} className='hover:text-on-surface transition-colors'>
-								Contests
-							</a>
-							<a href='#' style={{ color: 'var(--on-surface-variant)' }} className='hover:text-on-surface transition-colors'>
-								Leaderboard
-							</a>
+							<Link href='/tournaments' style={{ color: 'var(--on-surface-variant)' }} className='hover:text-on-surface transition-colors'>
+								Tournaments
+							</Link>
 						</div>
 					</div>
 
@@ -160,40 +163,8 @@ export default function ProblemsLibrary() {
 
 			{/* Main Content */}
 			<main className='pt-24 pb-20 px-4 md:px-8 lg:px-12 max-w-[1600px] mx-auto grid grid-cols-12 gap-8'>
-				{/* Left Sidebar */}
-				<aside className='hidden lg:flex col-span-2 flex-col gap-8 sticky top-24 self-start'>
-					{/* Category Filter */}
-					<div className='flex flex-col gap-2'>
-						<p className='text-xs font-medium uppercase tracking-widest' style={{ color: 'var(--on-surface-variant)' }}>
-							Category
-						</p>
-						<button className='flex items-center gap-3 p-3 rounded-lg text-sm font-semibold transition-all' style={{ background: 'var(--surface-container-high)', color: 'var(--primary)' }}>
-							<span>Algorithms</span>
-						</button>
-					</div>
-
-					{/* Daily Streak Card */}
-					{/* <div className='rounded-xl p-6 border' style={{ background: 'var(--surface-container-low)', borderColor: 'rgba(70, 69, 84, 0.15)' }}>
-						<h3 className='text-sm font-bold mb-4 flex items-center gap-2'>
-							<span style={{ color: 'var(--on-surface)' }}>Daily Streak</span>
-						</h3>
-						<div className='flex items-end gap-1 mb-4'>
-							<div className='h-8 w-1 rounded-full' style={{ background: 'var(--surface-container-highest)' }}></div>
-							<div className='h-12 w-1 rounded-full' style={{ background: 'var(--surface-container-highest)' }}></div>
-							<div className='h-10 w-1 rounded-full' style={{ background: 'var(--primary)' }}></div>
-							<div className='h-16 w-1 rounded-full' style={{ background: 'var(--primary)' }}></div>
-							<div className='h-14 w-1 rounded-full' style={{ background: 'var(--primary)' }}></div>
-							<div className='h-4 w-1 rounded-full' style={{ background: 'var(--surface-container-highest)' }}></div>
-							<div className='h-8 w-1 rounded-full' style={{ background: 'var(--surface-container-highest)' }}></div>
-						</div>
-						<p className='text-xs' style={{ color: 'var(--on-surface-variant)' }}>
-							Current: 14 Days
-						</p>
-					</div> */}
-				</aside>
-
 				{/* Main Content Area */}
-				<div className='col-span-12 lg:col-span-10 flex flex-col gap-10'>
+				<div className='col-span-12 flex flex-col gap-10'>
 					{/* Hero Section */}
 					<section className='grid grid-cols-1 md:grid-cols-3 gap-6'>
 						{/* Hero Image */}
@@ -225,22 +196,6 @@ export default function ProblemsLibrary() {
 							</div>
 						</div>
 
-						{/* Stats Card */}
-						<div className='p-8 rounded-xl flex flex-col justify-between border' style={{ background: 'var(--surface-container)', borderColor: 'rgba(70, 69, 84, 0.1)' }}>
-							<div>
-								<p className='text-xs font-bold uppercase tracking-widest mb-1' style={{ color: 'var(--tertiary)' }}>
-									Solved Today
-								</p>
-								<h3 className='text-4xl font-black tracking-tighter' style={{ color: 'var(--on-surface)' }}>
-									1,248
-								</h3>
-							</div>
-							<div className='flex items-center gap-2 mt-4'>
-								<span className='text-xs' style={{ color: 'var(--on-surface-variant)' }}>
-									BEATCODE ON TOP!
-								</span>
-							</div>
-						</div>
 					</section>
 
 					{/* Problems Section */}
@@ -394,35 +349,16 @@ export default function ProblemsLibrary() {
 											</th>
 										</tr>
 									</thead>
-									<ProblemsTable setLoadingProblems={setLoadingProblems} selectedDifficulty={selectedDifficulty} selectedStatus={selectedStatus} selectedTopic={selectedTopic} />
+									<ProblemsTable
+										setLoadingProblems={setLoadingProblems}
+										selectedDifficulty={selectedDifficulty}
+										selectedStatus={selectedStatus}
+										selectedTopic={selectedTopic}
+										onTopicsChange={handleTopicsChange}
+									/>
 								</table>
 							</div>
 
-							{/* Pagination Footer */}
-							{!loadingProblems && (
-								<div className='px-8 py-4 border-t flex items-center justify-between' style={{ background: 'var(--surface-container-low)', borderColor: 'rgba(70, 69, 84, 0.1)' }}>
-									<span className='text-xs' style={{ color: 'var(--on-surface-variant)' }}>
-										Showing 1 to 3 of 2,492 problems
-									</span>
-									<div className='flex gap-2'>
-										{/* <button className='p-2 rounded-lg transition-all' style={{ color: 'var(--on-surface-variant)' }}>
-											<span className='material-symbols-outlined text-sm'>chevron_left</span>
-										</button> */}
-										<button className='px-3 py-1 rounded-lg text-xs font-bold' style={{ background: 'var(--primary)', color: 'var(--on-primary-container)' }}>
-											1
-										</button>
-										<button className='px-3 py-1 rounded-lg text-xs font-medium' style={{ color: 'var(--on-surface-variant)' }}>
-											2
-										</button>
-										<button className='px-3 py-1 rounded-lg text-xs font-medium' style={{ color: 'var(--on-surface-variant)' }}>
-											3
-										</button>
-										<button className='p-2 rounded-lg transition-all' style={{ color: 'var(--on-surface-variant)' }}>
-											<span className='material-symbols-outlined text-sm'> ... </span>
-										</button>
-									</div>
-								</div>
-							)}
 						</div>
 					</section>
 				</div>

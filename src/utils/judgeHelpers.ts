@@ -24,6 +24,7 @@ export function evaluateRunResult(
 			| "in_place_ordered"
 			| "in_place_unordered"
 			| "in_place_full_ordered"
+			| "unordered_nested"
 			| "bst_from_sorted";
 	}
 ): JudgeTestResult {
@@ -127,7 +128,11 @@ export function evaluateRunResult(
 			? (actual as any).__judge
 			: null;
 	const actualResult = judgeEnvelope ? judgeEnvelope.result : actual;
-	const mutatedArgs = judgeEnvelope && Array.isArray(judgeEnvelope.mutatedArgs) ? judgeEnvelope.mutatedArgs : undefined;
+	const mutatedArgsRaw =
+		judgeEnvelope && Array.isArray(judgeEnvelope.mutatedArgs) ? judgeEnvelope.mutatedArgs : undefined;
+	const mutatedArgs = Array.isArray(mutatedArgsRaw)
+		? mutatedArgsRaw.map((arg) => tryParseJsonString(arg))
+		: undefined;
 	const judgeMode = options?.judgeMode ?? "return_only";
 
 	if (judgeMode === "bst_from_sorted") {
@@ -162,6 +167,42 @@ export function evaluateRunResult(
 						error: `Invalid BST output: bstValid=${bstValid}, balanced=${balanced}, inorder=${JSON.stringify(
 							inorderVals
 						)}, expectedInorder=${JSON.stringify(numsNormalized)}`,
+				  }),
+		};
+	}
+
+	if (judgeMode === "unordered_nested") {
+		const actualNested = parseExpectedNestedArray(actualResult);
+		const expectedNested = parseExpectedNestedArray(expected);
+		if (!actualNested || !expectedNested) {
+			return {
+				testIndex,
+				passed: false,
+				expected,
+				actual: actualResult,
+				error: "unordered_nested comparator requires array-of-arrays output",
+				stdout: printed,
+			};
+		}
+
+		const canonicalize = (rows: any[][]): string[] =>
+			rows
+				.map((row) => [...row].map((v) => String(v)).sort((a, b) => a.localeCompare(b)).join("\u0001"))
+				.sort((a, b) => a.localeCompare(b));
+
+		const actualCanon = canonicalize(actualNested);
+		const expectedCanon = canonicalize(expectedNested);
+		const passed = deepEqual(actualCanon, expectedCanon);
+		return {
+			testIndex,
+			passed,
+			expected,
+			actual: actualResult,
+			stdout: printed,
+			...(passed
+				? {}
+				: {
+						error: `Expected groups=${JSON.stringify(expectedNested)}, got groups=${JSON.stringify(actualNested)}`,
 				  }),
 		};
 	}
@@ -283,6 +324,13 @@ function parseExpectedArray(expected: any): any[] | null {
 	}
 }
 
+function parseExpectedNestedArray(value: any): any[][] | null {
+	const parsed = Array.isArray(value) ? value : parseExpectedArray(value);
+	if (!Array.isArray(parsed)) return null;
+	if (!parsed.every((row) => Array.isArray(row))) return null;
+	return parsed as any[][];
+}
+
 type TreeNodeLite = { val: number; left: TreeNodeLite | null; right: TreeNodeLite | null };
 
 function buildTreeFromLevelArray(values: any[]): TreeNodeLite | null {
@@ -371,6 +419,25 @@ function parseLiteralToken(token: string): any {
 	return token;
 }
 
+function tryParseJsonString(value: any): any {
+	if (typeof value !== "string") return value;
+	const trimmed = value.trim();
+	if (!trimmed) return value;
+	const looksJson =
+		(trimmed.startsWith("[") && trimmed.endsWith("]")) ||
+		(trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+		trimmed === "null" ||
+		trimmed === "true" ||
+		trimmed === "false" ||
+		/^-?\d+(\.\d+)?$/.test(trimmed);
+	if (!looksJson) return value;
+	try {
+		return JSON.parse(trimmed);
+	} catch {
+		return value;
+	}
+}
+
 function parseIntersectionExpected(expected: any): { kind: "value"; value: number } | { kind: "none" } | null {
 	if (typeof expected !== "string") return null;
 	const trimmed = expected.trim();
@@ -418,6 +485,12 @@ export function buildJudgeResponse(results: JudgeTestResult[]): JudgeResponse {
  */
 function deepEqual(a: any, b: any): boolean {
 	if (a === b) return true;
+	if (typeof a === "number" && typeof b === "number") {
+		// Allow tiny floating-point noise (e.g. 9.261000000000001 vs 9.261).
+		const diff = Math.abs(a - b);
+		const scale = Math.max(1, Math.abs(a), Math.abs(b));
+		return diff <= 1e-9 * scale;
+	}
 	if (a === null || b === null) return false;
 	if (typeof a !== typeof b) return false;
 

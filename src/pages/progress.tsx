@@ -315,3 +315,9 @@ const ProgressPage = () => {
 };
 
 export default ProgressPage;
+
+export async function getServerSideProps() {
+	return {
+		props: {},
+	};
+}
